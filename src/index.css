@@ -1,0 +1,652 @@
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --color-bg-primary: #ffffff;
+    --color-bg-secondary: #f6f8fa;
+    --color-bg-tertiary: #eaeef2;
+    --color-border: #d0d7de;
+    --color-border-muted: #e1e4e8;
+    --color-text-primary: #1f2328;
+    --color-text-secondary: #656d76;
+    --color-text-muted: #848d97;
+    --color-accent: #0366d6;
+    --color-accent-hover: #0256b5;
+    --color-accent-subtle: #ddf4ff;
+    --color-brand: #e36209;
+    --color-brand-subtle: #fff0e6;
+    --color-success: #1a7f37;
+    --color-success-subtle: #dafbe1;
+    --color-danger: #cf222e;
+    --color-danger-subtle: #ffebe9;
+    --color-warning: #9a6700;
+    --color-warning-subtle: #fff8c5;
+    --color-severe: #bc4c00;
+    --color-done: #8250df;
+    --color-done-subtle: #fbefff;
+  }
+
+  .dark {
+    --color-bg-primary: #0d1117;
+    --color-bg-secondary: #161b22;
+    --color-bg-tertiary: #21262d;
+    --color-border: #30363d;
+    --color-border-muted: #21262d;
+    --color-text-primary: #e6edf3;
+    --color-text-secondary: #8b949e;
+    --color-text-muted: #6e7681;
+    --color-accent: #1f6feb;
+    --color-accent-hover: #388bfd;
+    --color-accent-subtle: #121d2f;
+    --color-brand: #f0883e;
+    --color-brand-subtle: #2a1500;
+    --color-success: #3fb950;
+    --color-success-subtle: #0f2c18;
+    --color-danger: #f85149;
+    --color-danger-subtle: #2d0f0e;
+    --color-warning: #d29922;
+    --color-warning-subtle: #2a1d05;
+    --color-severe: #db6d28;
+    --color-done: #a371f7;
+    --color-done-subtle: #1e0938;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  body {
+    background-color: var(--color-bg-primary);
+    color: var(--color-text-primary);
+    margin: 0;
+    transition: background-color 0.2s ease, color 0.2s ease;
+  }
+
+  a {
+    color: var(--color-accent);
+    text-decoration: none;
+  }
+
+  a:hover {
+    text-decoration: underline;
+  }
+}
+
+/* GitHub-style utility classes */
+.gh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 20px;
+  border-radius: 6px;
+  border: 1px solid;
+  cursor: pointer;
+  text-decoration: none;
+  transition: background-color 0.1s ease, border-color 0.1s ease, color 0.1s ease;
+  white-space: nowrap;
+}
+
+.gh-btn-primary {
+  background-color: var(--color-accent);
+  border-color: rgba(255,255,255,0.15);
+  color: #ffffff;
+}
+
+.gh-btn-primary:hover {
+  background-color: var(--color-accent-hover);
+  color: #ffffff;
+  text-decoration: none;
+}
+
+.gh-btn-secondary {
+  background-color: var(--color-bg-secondary);
+  border-color: var(--color-border);
+  color: var(--color-text-primary);
+}
+
+.gh-btn-secondary:hover {
+  background-color: var(--color-bg-tertiary);
+  text-decoration: none;
+}
+
+.gh-btn-danger {
+  background-color: var(--color-danger);
+  border-color: rgba(255,255,255,0.1);
+  color: #ffffff;
+}
+
+.gh-btn-danger:hover {
+  opacity: 0.9;
+  text-decoration: none;
+}
+
+.gh-card {
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+}
+
+.gh-input {
+  width: 100%;
+  padding: 5px 12px;
+  font-size: 14px;
+  line-height: 20px;
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  color: var(--color-text-primary);
+  outline: none;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.gh-input:focus {
+  border-color: var(--color-accent);
+  box-shadow: 0 0 0 3px rgba(3,102,214,0.15);
+}
+
+.dark .gh-input:focus {
+  box-shadow: 0 0 0 3px rgba(31,111,235,0.2);
+}
+
+.gh-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 6px;
+  color: var(--color-text-primary);
+}
+
+.gh-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  border-radius: 20px;
+  border: 1px solid transparent;
+}
+
+.gh-badge-blue {
+  background-color: var(--color-accent-subtle);
+  color: var(--color-accent);
+  border-color: var(--color-accent);
+}
+
+.gh-badge-green {
+  background-color: var(--color-success-subtle);
+  color: var(--color-success);
+}
+
+.gh-badge-red {
+  background-color: var(--color-danger-subtle);
+  color: var(--color-danger);
+}
+
+.gh-badge-yellow {
+  background-color: var(--color-warning-subtle);
+  color: var(--color-warning);
+}
+
+.gh-badge-purple {
+  background-color: var(--color-done-subtle);
+  color: var(--color-done);
+}
+
+.gh-badge-gray {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+}
+
+.gh-badge-orange {
+  background-color: var(--color-brand-subtle);
+  color: var(--color-brand);
+  border-color: var(--color-brand);
+}
+
+.gh-divider {
+  border: none;
+  border-top: 1px solid var(--color-border);
+  margin: 0;
+}
+
+.page-container {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 16px;
+}
+
+.sidebar-layout {
+  display: grid;
+  grid-template-columns: 260px 1fr;
+  gap: 24px;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .sidebar-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg-secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}
+
+/* Avatar initials */
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-weight: 600;
+  background-color: var(--color-accent);
+  color: white;
+  flex-shrink: 0;
+}
+
+/* Skeleton loader */
+@keyframes shimmer {
+  0% { opacity: 0.5; }
+  50% { opacity: 1; }
+  100% { opacity: 0.5; }
+}
+
+.skeleton {
+  background-color: var(--color-bg-tertiary);
+  border-radius: 4px;
+  animation: shimmer 1.5s ease-in-out infinite;
+}
+
+/* Toast */
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+/* Tab nav */
+.tab-nav {
+  display: flex;
+  border-bottom: 1px solid var(--color-border);
+  gap: 0;
+  overflow-x: auto;
+}
+
+.tab-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--color-text-secondary);
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: color 0.1s ease, border-color 0.1s ease;
+  margin-bottom: -1px;
+}
+
+.tab-item:hover {
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.tab-item.active {
+  color: var(--color-text-primary);
+  border-bottom-color: #fd8c73;
+  font-weight: 600;
+}
+
+/* Counter badge in tabs */
+.tab-count {
+  background-color: var(--color-bg-tertiary);
+  color: var(--color-text-secondary);
+  border-radius: 20px;
+  padding: 0 6px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+/* Progress bar */
+.progress-bar {
+  height: 8px;
+  background-color: var(--color-bg-tertiary);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background-color: var(--color-accent);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+/* Modal */
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 16px;
+}
+
+.modal-box {
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+  width: 100%;
+  max-width: 480px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+/* Dropdown */
+.dropdown {
+  position: relative;
+  display: inline-block;
+}
+
+.dropdown-menu {
+  position: absolute;
+  right: 0;
+  top: calc(100% + 4px);
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  min-width: 180px;
+  z-index: 100;
+  padding: 4px 0;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+}
+
+.dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 16px;
+  font-size: 14px;
+  color: var(--color-text-primary);
+  cursor: pointer;
+  transition: background-color 0.1s;
+  text-decoration: none;
+}
+
+.dropdown-item:hover {
+  background-color: var(--color-bg-secondary);
+  text-decoration: none;
+}
+
+/* Stat card */
+.stat-card {
+  background-color: var(--color-bg-primary);
+  border: 1px solid var(--color-border);
+  border-radius: 6px;
+  padding: 16px;
+}
+
+/* Leaderboard */
+.rank-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+  animation: fadeIn 0.2s ease forwards;
+}
+
+/* Sidebar nav */
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background-color 0.1s, color 0.1s;
+  text-decoration: none;
+}
+
+.nav-item:hover {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  text-decoration: none;
+}
+
+.nav-item.active {
+  background-color: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+/* ── UI/UX Polish ─────────────────────────────────────────────── */
+
+/* Select element — match gh-input */
+select.gh-input {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%23848d97' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 10px center;
+  padding-right: 30px;
+  cursor: pointer;
+}
+
+/* Textarea — inherit font */
+textarea.gh-input {
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  resize: vertical;
+}
+
+/* Input placeholder */
+.gh-input::placeholder {
+  color: var(--color-text-muted);
+  opacity: 1;
+}
+
+/* Button focus ring (keyboard nav) */
+.gh-btn:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* Input focus ring */
+.gh-input:focus-visible {
+  outline: none;
+}
+
+/* Interactive card — used on cards you can hover/click */
+.gh-card-interactive {
+  transition: border-color 0.15s ease, background-color 0.1s ease, transform 0.1s ease;
+  cursor: pointer;
+}
+.gh-card-interactive:hover {
+  border-color: var(--color-accent);
+  background-color: var(--color-bg-secondary);
+}
+.gh-card-interactive:active {
+  transform: translateY(1px);
+}
+
+/* Subtle grid background */
+.bg-grid-pattern {
+  background-image: radial-gradient(var(--color-border) 0.5px, transparent 0.5px);
+  background-size: 20px 20px;
+}
+.dark .bg-grid-pattern {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.1) 0.5px, transparent 0.5px);
+}
+
+/* Empty state */
+.empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--color-text-muted);
+  gap: 10px;
+}
+.empty-state-icon {
+  opacity: 0.5;
+  margin-bottom: 4px;
+}
+.empty-state-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+.empty-state-desc {
+  font-size: 13px;
+  margin: 0;
+  max-width: 320px;
+  line-height: 1.5;
+}
+
+/* Section header pattern */
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--color-text-muted);
+  margin: 0 0 10px;
+}
+
+/* Keyboard shortcut hint */
+kbd {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1px 5px;
+  font-size: 11px;
+  font-family: inherit;
+  background-color: var(--color-bg-tertiary);
+  border: 1px solid var(--color-border);
+  border-radius: 4px;
+  color: var(--color-text-muted);
+  line-height: 16px;
+}
+
+/* Divider with label */
+.divider-label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+  color: var(--color-text-muted);
+  margin: 16px 0;
+}
+.divider-label::before,
+.divider-label::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background-color: var(--color-border);
+}
+
+/* Status dot */
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
+}
+.status-dot-green  { background-color: var(--color-success); }
+.status-dot-yellow { background-color: var(--color-warning); }
+.status-dot-red    { background-color: var(--color-danger); }
+.status-dot-blue   { background-color: var(--color-accent); }
+.status-dot-gray   { background-color: var(--color-text-muted); }
+
+/* Pulsing dot (live indicator) */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+.status-dot-live {
+  animation: pulse 1.4s ease-in-out infinite;
+}
+
+/* Better link underline on hover */
+a.link-subtle {
+  color: var(--color-text-secondary);
+  text-decoration: none;
+}
+a.link-subtle:hover {
+  color: var(--color-text-primary);
+  text-decoration: underline;
+}
+
+/* Responsive table scroll */
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Page-level padding fix on small screens */
+@media (max-width: 640px) {
+  .page-container {
+    padding: 0 12px;
+  }
+  .gh-btn {
+    font-size: 13px;
+    padding: 4px 12px;
+  }
+}
+
+/* Sticky sidebar utility */
+.sticky-sidebar {
+  position: sticky;
+  top: 80px;
+}
