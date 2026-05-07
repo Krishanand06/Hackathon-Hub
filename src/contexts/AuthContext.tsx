@@ -4,6 +4,7 @@ import { authApi } from '../api/auth';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
+  loginDemo: () => void;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   updateUser: (user: User) => void;
@@ -48,6 +49,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setState({ user, token, isAuthenticated: true });
   };
 
+  const loginDemo = () => {
+    const token = 'demo-token';
+    const user: User = {
+      id: 1,
+      username: 'demo_user',
+      email: 'demo@bits.edu',
+      fullName: 'Demo Student',
+      role: 'STUDENT',
+      skills: ['React', 'Node.js', 'Python'],
+      bio: 'BITS Pilani CS student',
+    };
+    localStorage.setItem('token', token);
+    localStorage.setItem('user', JSON.stringify(user));
+    setState({ user, token, isAuthenticated: true });
+  };
+
   const register = async (data: RegisterData) => {
     const response = await authApi.register(data);
     const { token, user } = response.data;
@@ -68,7 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ ...state, login, register, logout, updateUser }}>
+    <AuthContext.Provider value={{ ...state, login, loginDemo, register, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

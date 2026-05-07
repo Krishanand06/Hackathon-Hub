@@ -6,7 +6,7 @@ import { useTheme } from '../../contexts/ThemeContext';
 import { Sun, Moon } from 'lucide-react';
 
 export default function Login() {
-  const { login } = useAuth();
+  const { login, loginDemo } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const navigate = useNavigate();
 
@@ -37,14 +37,8 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      // For demo mode, bypass API and set mock user directly
-      localStorage.setItem('token', 'demo-token');
-      localStorage.setItem('user', JSON.stringify({
-        id: 1, username: 'demo_user', email: 'demo@bits.edu',
-        fullName: 'Demo Student', role: 'STUDENT',
-        skills: ['React', 'Node.js', 'Python'], bio: 'BITS Pilani CS student',
-      }));
-      window.location.href = '/dashboard';
+      loginDemo();
+      navigate('/dashboard');
     } catch {
       setError('Demo login failed.');
       setLoading(false);
