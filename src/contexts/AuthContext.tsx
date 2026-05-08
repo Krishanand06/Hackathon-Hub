@@ -1,6 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, AuthState } from '../types';
-import { authApi } from '../api/auth';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
@@ -41,12 +40,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, []);
 
-  const login = async (email: string, password: string) => {
-    const response = await authApi.login({ email, password });
-    const { token, user } = response.data;
+  const persistSession = (token: string, user: User) => {
     localStorage.setItem('token', token);
     localStorage.setItem('user', JSON.stringify(user));
     setState({ user, token, isAuthenticated: true });
+  };
+
+  const login = async (email: string, password: string) => {
+    if (!email || !password) {
+      throw new Error('Email and password are required');
+    }
+    persistSession('demo-token', {
+      id: 1,
+      username: email.split('@')[0] || 'demo_user',
+      email,
+      fullName: email === 'demo@bits.edu' ? 'Demo Student' : 'BITS Student',
+      role: 'STUDENT',
+      skills: ['React', 'Node.js', 'Python'],
+      bio: 'BITS Pilani CS student',
+    });
   };
 
   const loginDemo = () => {
@@ -60,17 +72,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       skills: ['React', 'Node.js', 'Python'],
       bio: 'BITS Pilani CS student',
     };
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    setState({ user, token, isAuthenticated: true });
+    persistSession(token, user);
   };
 
   const register = async (data: RegisterData) => {
-    const response = await authApi.register(data);
-    const { token, user } = response.data;
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    setState({ user, token, isAuthenticated: true });
+    persistSession('demo-token', {
+      id: Date.now(),
+      username: data.username,
+      email: data.email,
+      fullName: data.fullName,
+      role: (data.role as User['role']) ?? 'STUDENT',
+      skills: [],
+      bio: '',
+    });
   };
 
   const logout = () => {

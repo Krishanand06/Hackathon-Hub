@@ -50,13 +50,7 @@ export default function Register() {
       });
       navigate('/dashboard');
     } catch {
-      // For demo: create mock user
-      localStorage.setItem('token', 'demo-token');
-      localStorage.setItem('user', JSON.stringify({
-        id: Date.now(), username: form.username, email: form.email,
-        fullName: form.fullName, role: form.role, skills: [], bio: '',
-      }));
-      window.location.href = '/dashboard';
+      setError('Registration failed. Please try again.');
     } finally {
       setLoading(false);
     }
