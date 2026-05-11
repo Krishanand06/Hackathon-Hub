@@ -59,8 +59,11 @@ export default function Navbar() {
             <span>BITS <span style={{ color: 'var(--color-brand)' }}>Hub</span></span>
           </Link>
 
-          {/* Desktop nav */}
-          <nav style={{ display: 'flex', gap: '4px', marginLeft: '8px' }} className="hide-mobile">
+          {/* Main nav (hidden only on small phones; wider tablets keep links visible) */}
+          <nav
+            className="hide-mobile nav-main-scroll"
+            style={{ display: 'flex', gap: '4px', marginLeft: '8px', flex: '1 1 auto', minWidth: 0, overflowX: 'auto' }}
+          >
             {navLinks.map(link => {
               const isActive = location.pathname.startsWith(link.to);
               return (
@@ -153,7 +156,12 @@ export default function Navbar() {
                       </Link>
                       {user?.role === 'ADMIN' && (
                         <Link to="/admin" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
-                          <Trophy size={14} /> Admin Panel
+                          <Trophy size={14} /> Admin panel
+                        </Link>
+                      )}
+                      {user?.role === 'JUDGE' && (
+                        <Link to="/admin" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
+                          <Trophy size={14} /> Review workspace
                         </Link>
                       )}
                       <hr className="gh-divider" style={{ margin: '4px 0' }} />
@@ -209,11 +217,14 @@ export default function Navbar() {
       </div>
 
       <style>{`
-        @media (max-width: 768px) {
+        .nav-main-scroll { flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: thin; }
+        .nav-main-scroll::-webkit-scrollbar { height: 4px; }
+        .nav-main-scroll::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 4px; }
+        @media (max-width: 640px) {
           .hide-mobile { display: none !important; }
           .show-mobile { display: flex !important; }
         }
-        @media (min-width: 769px) {
+        @media (min-width: 641px) {
           .show-mobile { display: none !important; }
         }
       `}</style>
