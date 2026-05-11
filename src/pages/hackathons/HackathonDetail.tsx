@@ -5,6 +5,8 @@ import { mockHackathons, mockTeams } from '../../data/mockData';
 import { useAuth } from '../../contexts/AuthContext';
 import Modal from '../../components/ui/Modal';
 import TeamCard from '../../components/teams/TeamCard';
+import api from '../../api/client';
+import { Hackathon, Team } from '../../types';
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -17,11 +19,23 @@ const statusColors: Record<string, string> = {
 
 export default function HackathonDetail() {
   const { id } = useParams();
-  const { isAuthenticated } = useAuth();
-  const hackathon = mockHackathons.find(h => h.id === Number(id));
+  const { isAuthenticated, user } = useAuth();
+  const [hackathon, setHackathon] = useState<Hackathon | undefined>(() => mockHackathons.find(h => h.id === Number(id)));
+  const [teams, setTeams] = useState<Team[]>(mockTeams);
   const [registered, setRegistered] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'schedule'>('overview');
+
+  React.useEffect(() => {
+    if (!id) return;
+    api.get<Hackathon>(`/hackathons/${id}`)
+      .then(response => setHackathon(response.data))
+      .catch(() => setHackathon(mockHackathons.find(h => h.id === Number(id))));
+
+    api.get<Team[]>('/teams')
+      .then(response => setTeams(response.data))
+      .catch(() => setTeams(mockTeams));
+  }, [id]);
 
   if (!hackathon) {
     return (
@@ -33,7 +47,7 @@ export default function HackathonDetail() {
     );
   }
 
-  const relatedTeams = mockTeams.filter(t => t.hackathonId === hackathon.id);
+  const relatedTeams = teams.filter(t => t.hackathonId === hackathon.id);
   const fillPct = Math.min(100, Math.round((hackathon.currentParticipants / hackathon.maxParticipants) * 100));
 
   return (
@@ -196,7 +210,13 @@ export default function HackathonDetail() {
         footer={
           <>
             <button onClick={() => setShowModal(false)} className="gh-btn gh-btn-secondary">Cancel</button>
-            <button onClick={() => { setRegistered(true); setShowModal(false); }} className="gh-btn gh-btn-primary">
+            <button onClick={() => {
+              if (user) {
+                api.post('/registrations', { userId: user.id, hackathonId: hackathon.id }).catch(() => undefined);
+              }
+              setRegistered(true);
+              setShowModal(false);
+            }} className="gh-btn gh-btn-primary">
               Confirm Registration
             </button>
           </>

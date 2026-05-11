@@ -21,11 +21,6 @@ public class ResourceController {
         return ResponseEntity.ok(repository.findAll());
     }
 
-    @GetMapping("/type/{type}")
-    public ResponseEntity<List<Resource>> getResourcesByType(@PathVariable String type) {
-        return ResponseEntity.ok(repository.findByType(type));
-    }
-
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Resource> createResource(@RequestBody Resource resource) {

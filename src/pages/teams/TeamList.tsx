@@ -3,13 +3,22 @@ import { mockTeams } from '../../data/mockData';
 import TeamCard from '../../components/teams/TeamCard';
 import { Search, Users, Cpu } from 'lucide-react';
 import { SkillSelector } from '../../components/ui/SkillBadge';
+import api from '../../api/client';
+import { Team } from '../../types';
 
 export default function TeamList() {
+  const [teams, setTeams] = useState<Team[]>(mockTeams);
   const [search, setSearch] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
   const [openOnly, setOpenOnly] = useState(false);
 
-  const filtered = mockTeams.filter(t => {
+  React.useEffect(() => {
+    api.get<Team[]>('/teams')
+      .then(response => setTeams(response.data))
+      .catch(() => setTeams(mockTeams));
+  }, []);
+
+  const filtered = teams.filter(t => {
     const matchSearch = !search || t.name.toLowerCase().includes(search.toLowerCase()) ||
       t.hackathonTitle.toLowerCase().includes(search.toLowerCase());
     const matchSkills = skills.length === 0 || skills.some(s => t.requiredSkills.includes(s));

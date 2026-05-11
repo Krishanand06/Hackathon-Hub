@@ -16,9 +16,10 @@ public class Submission {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "submission_id")
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "project_title", nullable = false)
     private String projectTitle;
 
     @Column(columnDefinition = "TEXT", nullable = false)
@@ -36,12 +37,17 @@ public class Submission {
     @JoinColumn(name = "user_id", nullable = false)
     private User submittedBy;
 
+    @Column(name = "repo_url")
     private String repoUrl;
+    @Column(name = "demo_url")
     private String demoUrl;
 
     @ElementCollection
+    @CollectionTable(name = "submission_tech_stack", joinColumns = @JoinColumn(name = "submission_id"))
+    @Column(name = "tech_name")
     private Set<String> techStack;
 
+    @Column(name = "submitted_at")
     private LocalDateTime submittedAt;
 
     @Enumerated(EnumType.STRING)

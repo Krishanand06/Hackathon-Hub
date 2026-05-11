@@ -30,7 +30,7 @@ public class SubmissionService {
 
     public Submission createSubmission(Submission submission) {
         submission.setSubmittedAt(LocalDateTime.now());
-        submission.setStatus(SubmissionStatus.PENDING);
+        submission.setStatus(SubmissionStatus.SUBMITTED);
         return repository.save(submission);
     }
 

@@ -1,6 +1,8 @@
 package edu.bits.hackathonhub.model;
 
 public enum SubmissionStatus {
-    PENDING,
+    DRAFT,
+    SUBMITTED,
+    UNDER_REVIEW,
     EVALUATED
 }

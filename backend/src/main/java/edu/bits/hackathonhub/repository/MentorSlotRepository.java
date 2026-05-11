@@ -6,6 +6,6 @@ import java.util.List;
 
 public interface MentorSlotRepository extends JpaRepository<MentorSlot, Long> {
     List<MentorSlot> findByMentorId(Long mentorId);
-    List<MentorSlot> findByMentorIdAndIsBookedFalse(Long mentorId);
+    List<MentorSlot> findByMentorIdAndStatus(Long mentorId, MentorSlot.SlotStatus status);
     List<MentorSlot> findByBookedById(Long userId);
 }

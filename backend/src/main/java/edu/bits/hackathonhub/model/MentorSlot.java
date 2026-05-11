@@ -15,21 +15,37 @@ public class MentorSlot {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "slot_id")
     private Long id;
 
-    @ManyToOne
-    @JoinColumn(name = "mentor_id", nullable = false)
-    private User mentor;
+    @Column(name = "mentor_id", nullable = false)
+    private Long mentorId;
 
-    @Column(nullable = false)
+    @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime;
 
-    @Column(nullable = false)
+    @Column(name = "end_time", nullable = false)
     private LocalDateTime endTime;
 
-    private boolean isBooked;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private SlotStatus status;
 
     @ManyToOne
-    @JoinColumn(name = "booked_by_id")
+    @JoinColumn(name = "booked_by_user_id")
     private User bookedBy;
+
+    public boolean isBooked() {
+        return status == SlotStatus.BOOKED;
+    }
+
+    public void setBooked(boolean booked) {
+        this.status = booked ? SlotStatus.BOOKED : SlotStatus.AVAILABLE;
+    }
+
+    public enum SlotStatus {
+        AVAILABLE,
+        BOOKED,
+        CANCELLED
+    }
 }

@@ -16,6 +16,7 @@ public class Evaluation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "evaluation_id")
     private Long id;
 
     @ManyToOne
@@ -26,13 +27,12 @@ public class Evaluation {
     @JoinColumn(name = "judge_id", nullable = false)
     private User judge;
 
-    @ElementCollection
-    @CollectionTable(name = "evaluation_scores", joinColumns = @JoinColumn(name = "evaluation_id"))
-    @MapKeyColumn(name = "criterion")
-    @Column(name = "score")
+    @Transient
     private Map<String, Double> scores;
 
     private String feedback;
+    @Column(name = "total_score")
     private Double totalScore;
+    @Column(name = "evaluated_at")
     private LocalDateTime evaluatedAt;
 }

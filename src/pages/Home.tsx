@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom';
 import { Trophy, Users, Code2, ArrowRight, Zap, Globe, Calendar } from 'lucide-react';
 import { mockHackathons } from '../data/mockData';
 import HackathonCard from '../components/hackathons/HackathonCard';
+import api from '../api/client';
+import { Hackathon } from '../types';
 
 const stats = [
   { label: 'Hackathons Hosted', value: '24+', icon: <Trophy size={18} />, color: 'var(--color-brand)' },
@@ -39,7 +41,15 @@ const features = [
 ];
 
 export default function Home() {
-  const featured = mockHackathons.filter(h => h.status === 'OPEN' || h.status === 'UPCOMING').slice(0, 3);
+  const [hackathons, setHackathons] = React.useState<Hackathon[]>(mockHackathons);
+
+  React.useEffect(() => {
+    api.get<Hackathon[]>('/hackathons')
+      .then(response => setHackathons(response.data))
+      .catch(() => setHackathons(mockHackathons));
+  }, []);
+
+  const featured = hackathons.filter(h => h.status === 'OPEN' || h.status === 'UPCOMING').slice(0, 3);
 
   return (
     <div>

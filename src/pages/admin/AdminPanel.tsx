@@ -1,38 +1,138 @@
 import React, { useState } from 'react';
-import { mockHackathons, mockSubmissions, mockLeaderboard } from '../../data/mockData';
+import { Link } from 'react-router-dom';
+import { mockHackathons, mockSubmissions, mockLeaderboard, mockTeams } from '../../data/mockData';
 import LeaderboardTable from '../../components/leaderboard/LeaderboardTable';
-import { CheckCircle, XCircle, Star } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { CheckCircle, ExternalLink, Plus, Save, Star, Users } from 'lucide-react';
+import { Hackathon, Submission, Team } from '../../types';
+import api from '../../api/client';
 
 const CRITERIA = ['innovation', 'implementation', 'presentation', 'impact', 'feasibility'] as const;
 
+const emptyHackathon = {
+  title: '',
+  theme: '',
+  description: '',
+  startDate: '',
+  endDate: '',
+  registrationDeadline: '',
+  maxParticipants: '100',
+  minTeamSize: '1',
+  maxTeamSize: '4',
+  prizePool: '',
+  status: 'UPCOMING' as Hackathon['status'],
+  isOnline: true,
+  venue: '',
+  tags: '',
+};
+
+function formatDateTime(date: string) {
+  return new Date(date).toLocaleString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
 export default function AdminPanel() {
+  const { user } = useAuth();
+  const isAdmin = user?.role === 'ADMIN';
   const [activeTab, setActiveTab] = useState<'submissions' | 'leaderboard' | 'hackathons'>('submissions');
   const [scores, setScores] = useState<Record<number, Record<string, number>>>({});
   const [feedbacks, setFeedbacks] = useState<Record<number, string>>({});
   const [evaluated, setEvaluated] = useState<number[]>([]);
+  const [hackathons, setHackathons] = useState<Hackathon[]>(mockHackathons);
+  const [submissions, setSubmissions] = useState<Submission[]>(mockSubmissions);
+  const [teams, setTeams] = useState<Team[]>(mockTeams);
+  const [newHackathon, setNewHackathon] = useState(emptyHackathon);
+
+  React.useEffect(() => {
+    api.get<Hackathon[]>('/hackathons').then(response => setHackathons(response.data)).catch(() => setHackathons(mockHackathons));
+    api.get<Submission[]>('/submissions').then(response => setSubmissions(response.data)).catch(() => setSubmissions(mockSubmissions));
+    api.get<Team[]>('/teams').then(response => setTeams(response.data)).catch(() => setTeams(mockTeams));
+  }, []);
+
+  const tabs: Array<typeof activeTab> = isAdmin
+    ? ['submissions', 'leaderboard', 'hackathons']
+    : ['submissions', 'leaderboard'];
 
   const setScore = (subId: number, criterion: string, value: number) => {
     setScores(prev => ({ ...prev, [subId]: { ...(prev[subId] || {}), [criterion]: value } }));
   };
 
-  const submit = (subId: number) => setEvaluated(e => [...e, subId]);
+  const submitEvaluation = (subId: number) => {
+    const currentScores = scores[subId] || {};
+    api.post('/evaluations', {
+      submissionId: subId,
+      judgeId: user?.id ?? 3,
+      feedback: feedbacks[subId] || '',
+      innovation: currentScores.innovation || 0,
+      implementation: currentScores.implementation || 0,
+      presentation: currentScores.presentation || 0,
+      impact: currentScores.impact || 0,
+      feasibility: currentScores.feasibility || 0,
+    }).catch(() => undefined);
+    setEvaluated(prev => prev.includes(subId) ? prev : [...prev, subId]);
+  };
 
   const totalScore = (subId: number) => {
-    const s = scores[subId] || {};
-    return CRITERIA.reduce((acc, c) => acc + (s[c] || 0), 0) / CRITERIA.length;
+    const currentScores = scores[subId] || {};
+    return CRITERIA.reduce((acc, c) => acc + (currentScores[c] || 0), 0) / CRITERIA.length;
+  };
+
+  const addHackathon = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!newHackathon.title || !newHackathon.startDate || !newHackathon.endDate || !newHackathon.registrationDeadline) return;
+
+    const created: Hackathon = {
+      id: Date.now(),
+      title: newHackathon.title,
+      theme: newHackathon.theme || 'General Innovation',
+      description: newHackathon.description || 'Details will be updated soon.',
+      startDate: newHackathon.startDate,
+      endDate: newHackathon.endDate,
+      registrationDeadline: newHackathon.registrationDeadline,
+      maxParticipants: Number(newHackathon.maxParticipants) || 100,
+      currentParticipants: 0,
+      minTeamSize: Number(newHackathon.minTeamSize) || 1,
+      maxTeamSize: Number(newHackathon.maxTeamSize) || 4,
+      prizePool: newHackathon.prizePool || 'TBA',
+      status: newHackathon.status,
+      tags: newHackathon.tags.split(',').map(tag => tag.trim()).filter(Boolean),
+      venue: newHackathon.isOnline ? undefined : newHackathon.venue,
+      isOnline: newHackathon.isOnline,
+      organizerId: user?.id ?? 1,
+      organizerName: user?.fullName ?? 'BITS Admin',
+    };
+
+    api.post<Hackathon>('/hackathons', created)
+      .then(response => setHackathons(prev => [response.data, ...prev]))
+      .catch(() => setHackathons(prev => [created, ...prev]));
+    setNewHackathon(emptyHackathon);
   };
 
   return (
     <div className="page-container">
       <div style={{ marginBottom: 24 }}>
-        <h1 style={{ margin: '0 0 4px', fontSize: 24, fontWeight: 600 }}>Admin & Judge Panel</h1>
-        <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 14 }}>Evaluate submissions and manage hackathons</p>
+        <h1 style={{ margin: '0 0 4px', fontSize: 24, fontWeight: 600 }}>
+          {isAdmin ? 'Admin Panel' : 'Judge Panel'}
+        </h1>
+        <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 14 }}>
+          {isAdmin
+            ? 'Create hackathons, review submissions, and monitor leaderboard results.'
+            : 'Review submitted project details and record judging scores.'}
+        </p>
       </div>
 
       <div className="tab-nav" style={{ marginBottom: 24 }}>
-        {(['submissions', 'leaderboard', 'hackathons'] as const).map(tab => (
-          <button key={tab} onClick={() => setActiveTab(tab)} className={`tab-item ${activeTab === tab ? 'active' : ''}`}
-            style={{ background: 'none', border: 'none', cursor: 'pointer', textTransform: 'capitalize' }}>
+        {tabs.map(tab => (
+          <button
+            key={tab}
+            onClick={() => setActiveTab(tab)}
+            className={`tab-item ${activeTab === tab ? 'active' : ''}`}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', textTransform: 'capitalize' }}
+          >
             {tab}
           </button>
         ))}
@@ -40,79 +140,204 @@ export default function AdminPanel() {
 
       {activeTab === 'submissions' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {mockSubmissions.map(sub => (
-            <div key={sub.id} className="gh-card" style={{ padding: 20 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
-                <div>
-                  <h3 style={{ margin: '0 0 4px', fontSize: 16, fontWeight: 600 }}>{sub.projectTitle}</h3>
-                  <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-muted)' }}>by {sub.teamName}</p>
+          {submissions.map(submission => {
+            const hackathon = hackathons.find(h => h.id === submission.hackathonId);
+            const team = teams.find(t => t.id === submission.teamId);
+            const isEvaluated = evaluated.includes(submission.id) || submission.status === 'EVALUATED';
+
+            return (
+              <article key={submission.id} className="gh-card" style={{ padding: 20 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, marginBottom: 14 }}>
+                  <div>
+                    <h2 style={{ margin: '0 0 4px', fontSize: 17, fontWeight: 700 }}>{submission.projectTitle}</h2>
+                    <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-muted)' }}>
+                      {team?.name ?? submission.teamName} - {hackathon?.title ?? 'Hackathon'} - Submitted {formatDateTime(submission.submittedAt)}
+                    </p>
+                  </div>
+                  <span className={`gh-badge ${isEvaluated ? 'gh-badge-green' : 'gh-badge-yellow'}`} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    {isEvaluated && <CheckCircle size={12} />}
+                    {isEvaluated ? 'Evaluated' : 'Pending'}
+                  </span>
                 </div>
-                {evaluated.includes(sub.id)
-                  ? <span className="gh-badge gh-badge-green" style={{ display: 'flex', alignItems: 'center', gap: 4 }}><CheckCircle size={12} /> Evaluated</span>
-                  : <span className="gh-badge gh-badge-yellow">Pending</span>
-                }
-              </div>
 
-              <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', marginBottom: 16 }}>{sub.description}</p>
+                <p style={{ fontSize: 13, color: 'var(--color-text-secondary)', lineHeight: 1.6, margin: '0 0 14px' }}>
+                  {submission.description}
+                </p>
 
-              <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-                {sub.techStack.map(t => <span key={t} className="gh-badge gh-badge-gray" style={{ fontSize: 11 }}>{t}</span>)}
-              </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 10, marginBottom: 14 }}>
+                  <InfoTile label="Team Members" value={team ? `${team.members.length}/${team.maxSize}` : 'Individual'} icon={<Users size={13} />} />
+                  <InfoTile label="Status" value={submission.status.replace('_', ' ')} />
+                  <InfoTile label="Current Score" value={submission.score ? `${submission.score}/100` : 'Not scored'} />
+                </div>
 
-              {!evaluated.includes(sub.id) && (
-                <>
+                {team && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 14 }}>
+                    {team.members.map(member => (
+                      <span key={member.id} className="gh-badge gh-badge-gray" style={{ fontSize: 11 }}>
+                        {member.fullName} - {member.role}
+                      </span>
+                    ))}
+                  </div>
+                )}
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                  {submission.techStack.map(tech => (
+                    <span key={tech} className="gh-badge gh-badge-gray" style={{ fontSize: 11 }}>{tech}</span>
+                  ))}
+                </div>
+
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 16 }}>
+                  <a href={submission.repoUrl} target="_blank" rel="noreferrer" className="gh-btn gh-btn-secondary" style={{ fontSize: 12, padding: '4px 10px' }}>
+                    Repository <ExternalLink size={12} />
+                  </a>
+                  {submission.demoUrl && (
+                    <a href={submission.demoUrl} target="_blank" rel="noreferrer" className="gh-btn gh-btn-secondary" style={{ fontSize: 12, padding: '4px 10px' }}>
+                      Demo <ExternalLink size={12} />
+                    </a>
+                  )}
+                </div>
+
+                <div style={{ borderTop: '1px solid var(--color-border)', paddingTop: 16 }}>
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 14 }}>
-                    {CRITERIA.map(c => (
-                      <div key={c}>
+                    {CRITERIA.map(criterion => (
+                      <div key={criterion}>
                         <label style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, fontWeight: 600, marginBottom: 4, color: 'var(--color-text-secondary)', textTransform: 'capitalize' }}>
-                          {c} <span style={{ color: 'var(--color-accent)' }}>{scores[sub.id]?.[c] || 0}/20</span>
+                          {criterion} <span style={{ color: 'var(--color-accent)' }}>{scores[submission.id]?.[criterion] || 0}/20</span>
                         </label>
-                        <input type="range" min={0} max={20} value={scores[sub.id]?.[c] || 0}
-                          onChange={e => setScore(sub.id, c, Number(e.target.value))}
-                          style={{ width: '100%', accentColor: 'var(--color-accent)' }} />
+                        <input
+                          type="range"
+                          min={0}
+                          max={20}
+                          value={scores[submission.id]?.[criterion] || 0}
+                          onChange={event => setScore(submission.id, criterion, Number(event.target.value))}
+                          style={{ width: '100%', accentColor: 'var(--color-accent)' }}
+                        />
                       </div>
                     ))}
                   </div>
+
                   <div style={{ marginBottom: 12 }}>
-                    <label className="gh-label">Feedback</label>
-                    <textarea className="gh-input" rows={2} placeholder="Provide constructive feedback…"
-                      value={feedbacks[sub.id] || ''}
-                      onChange={e => setFeedbacks(prev => ({ ...prev, [sub.id]: e.target.value }))}
-                      style={{ resize: 'vertical', fontFamily: 'inherit' }} />
+                    <label className="gh-label">Judge Feedback</label>
+                    <textarea
+                      className="gh-input"
+                      rows={2}
+                      placeholder="Add notes for the team. This will save to MySQL when backend wiring is ready."
+                      value={feedbacks[submission.id] || ''}
+                      onChange={event => setFeedbacks(prev => ({ ...prev, [submission.id]: event.target.value }))}
+                      style={{ resize: 'vertical', fontFamily: 'inherit' }}
+                    />
                   </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
                     <span style={{ fontSize: 14, fontWeight: 600 }}>
-                      Total: <span style={{ color: 'var(--color-accent)' }}>{totalScore(sub.id).toFixed(1)}/20</span>
+                      Draft total: <span style={{ color: 'var(--color-accent)' }}>{totalScore(submission.id).toFixed(1)}/20</span>
                     </span>
-                    <button onClick={() => submit(sub.id)} className="gh-btn gh-btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <button onClick={() => submitEvaluation(submission.id)} className="gh-btn gh-btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                       <Star size={14} /> Submit Evaluation
                     </button>
                   </div>
-                </>
-              )}
-            </div>
-          ))}
+                </div>
+              </article>
+            );
+          })}
         </div>
       )}
 
       {activeTab === 'leaderboard' && <LeaderboardTable entries={mockLeaderboard} />}
 
-      {activeTab === 'hackathons' && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {mockHackathons.map(h => (
-            <div key={h.id} className="gh-card" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontWeight: 600, fontSize: 14 }}>{h.title}</div>
-                <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{h.currentParticipants}/{h.maxParticipants} participants · {h.status}</div>
-              </div>
-              <span className={`gh-badge ${h.status === 'OPEN' ? 'gh-badge-green' : h.status === 'COMPLETED' ? 'gh-badge-gray' : 'gh-badge-yellow'}`}>
-                {h.status}
-              </span>
-              <button className="gh-btn gh-btn-secondary" style={{ fontSize: 12, padding: '3px 10px' }}>Manage</button>
+      {activeTab === 'hackathons' && isAdmin && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(320px, 0.9fr) minmax(0, 1.1fr)', gap: 18, alignItems: 'start' }}>
+          <form onSubmit={addHackathon} className="gh-card" style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div>
+              <h2 style={{ margin: '0 0 4px', fontSize: 17, fontWeight: 700 }}>Add Hackathon</h2>
+              <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 13 }}>
+                Saves locally for now; later this maps to the `hackathons` table.
+              </p>
             </div>
-          ))}
+
+            <Field label="Title" value={newHackathon.title} onChange={value => setNewHackathon(prev => ({ ...prev, title: value }))} required />
+            <Field label="Theme" value={newHackathon.theme} onChange={value => setNewHackathon(prev => ({ ...prev, theme: value }))} />
+            <div>
+              <label className="gh-label">Description</label>
+              <textarea className="gh-input" rows={3} value={newHackathon.description} onChange={event => setNewHackathon(prev => ({ ...prev, description: event.target.value }))} style={{ resize: 'vertical', fontFamily: 'inherit' }} />
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <Field label="Start" type="date" value={newHackathon.startDate} onChange={value => setNewHackathon(prev => ({ ...prev, startDate: value }))} required />
+              <Field label="End" type="date" value={newHackathon.endDate} onChange={value => setNewHackathon(prev => ({ ...prev, endDate: value }))} required />
+            </div>
+            <Field label="Registration Deadline" type="date" value={newHackathon.registrationDeadline} onChange={value => setNewHackathon(prev => ({ ...prev, registrationDeadline: value }))} required />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+              <Field label="Capacity" type="number" value={newHackathon.maxParticipants} onChange={value => setNewHackathon(prev => ({ ...prev, maxParticipants: value }))} />
+              <Field label="Min Team" type="number" value={newHackathon.minTeamSize} onChange={value => setNewHackathon(prev => ({ ...prev, minTeamSize: value }))} />
+              <Field label="Max Team" type="number" value={newHackathon.maxTeamSize} onChange={value => setNewHackathon(prev => ({ ...prev, maxTeamSize: value }))} />
+            </div>
+            <Field label="Prize Pool" value={newHackathon.prizePool} onChange={value => setNewHackathon(prev => ({ ...prev, prizePool: value }))} />
+            <Field label="Tags" value={newHackathon.tags} onChange={value => setNewHackathon(prev => ({ ...prev, tags: value }))} placeholder="AI, Web, SQL" />
+            <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-text-secondary)' }}>
+              <input type="checkbox" checked={newHackathon.isOnline} onChange={event => setNewHackathon(prev => ({ ...prev, isOnline: event.target.checked }))} />
+              Online event
+            </label>
+            {!newHackathon.isOnline && (
+              <Field label="Location" value={newHackathon.venue} onChange={value => setNewHackathon(prev => ({ ...prev, venue: value }))} />
+            )}
+            <button type="submit" className="gh-btn gh-btn-primary" style={{ justifyContent: 'center', gap: 6 }}>
+              <Plus size={14} /> Add Hackathon
+            </button>
+          </form>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {hackathons.map(hackathon => (
+              <div key={hackathon.id} className="gh-card" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14 }}>{hackathon.title}</div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
+                    {hackathon.currentParticipants}/{hackathon.maxParticipants} participants - {hackathon.isOnline ? 'Online' : hackathon.venue}
+                  </div>
+                </div>
+                <span className={`gh-badge ${statusClass(hackathon.status)}`}>{hackathon.status.replace('_', ' ')}</span>
+                <button className="gh-btn gh-btn-secondary" style={{ fontSize: 12, padding: '3px 10px' }}>
+                  <Save size={12} /> Manage
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
       )}
     </div>
   );
+}
+
+function Field({ label, value, onChange, type = 'text', placeholder, required = false }: {
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  type?: string;
+  placeholder?: string;
+  required?: boolean;
+}) {
+  return (
+    <div>
+      <label className="gh-label">{label}{required && <span style={{ color: 'var(--color-danger)', marginLeft: 2 }}>*</span>}</label>
+      <input className="gh-input" type={type} value={value} placeholder={placeholder} onChange={event => onChange(event.target.value)} required={required} />
+    </div>
+  );
+}
+
+function InfoTile({ label, value, icon }: { label: string; value: string; icon?: React.ReactNode }) {
+  return (
+    <div style={{ border: '1px solid var(--color-border)', borderRadius: 6, padding: '9px 10px', backgroundColor: 'var(--color-bg-secondary)' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--color-text-muted)', fontSize: 11, marginBottom: 4 }}>
+        {icon} {label}
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--color-text-primary)' }}>{value}</div>
+    </div>
+  );
+}
+
+function statusClass(status: Hackathon['status']) {
+  if (status === 'OPEN') return 'gh-badge-green';
+  if (status === 'IN_PROGRESS') return 'gh-badge-blue';
+  if (status === 'JUDGING') return 'gh-badge-purple';
+  if (status === 'COMPLETED') return 'gh-badge-gray';
+  return 'gh-badge-yellow';
 }

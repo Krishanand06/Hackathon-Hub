@@ -2,7 +2,8 @@ import React from 'react';
 import { mockHackathons } from '../../data/mockData';
 import HackathonCard from '../../components/hackathons/HackathonCard';
 import { Search, Filter } from 'lucide-react';
-import { HackathonStatus } from '../../types';
+import { Hackathon, HackathonStatus } from '../../types';
+import api from '../../api/client';
 
 const ALL_STATUSES: { value: HackathonStatus | ''; label: string }[] = [
   { value: '', label: 'All' },
@@ -14,11 +15,18 @@ const ALL_STATUSES: { value: HackathonStatus | ''; label: string }[] = [
 ];
 
 export default function HackathonList() {
+  const [hackathons, setHackathons] = React.useState<Hackathon[]>(mockHackathons);
   const [search, setSearch] = React.useState('');
   const [status, setStatus] = React.useState<HackathonStatus | ''>('');
   const [onlineOnly, setOnlineOnly] = React.useState(false);
 
-  const filtered = mockHackathons.filter(h => {
+  React.useEffect(() => {
+    api.get<Hackathon[]>('/hackathons')
+      .then(response => setHackathons(response.data))
+      .catch(() => setHackathons(mockHackathons));
+  }, []);
+
+  const filtered = hackathons.filter(h => {
     const matchSearch = !search || h.title.toLowerCase().includes(search.toLowerCase()) ||
       h.tags.some(t => t.toLowerCase().includes(search.toLowerCase()));
     const matchStatus = !status || h.status === status;

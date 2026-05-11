@@ -20,6 +20,7 @@ public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "user_id")
     private Long id;
 
     @Column(unique = true, nullable = false)
@@ -28,10 +29,10 @@ public class User implements UserDetails {
     @Column(unique = true, nullable = false)
     private String email;
 
-    @Column(nullable = false)
+    @Column(name = "password_hash", nullable = false)
     private String password;
 
-    @Column(nullable = false)
+    @Column(name = "full_name", nullable = false)
     private String fullName;
 
     @Enumerated(EnumType.STRING)
@@ -40,7 +41,7 @@ public class User implements UserDetails {
 
     private String bio;
 
-    @ElementCollection
+    @Transient
     private Set<String> skills;
 
     @Override

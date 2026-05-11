@@ -3,10 +3,19 @@ import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, Users, Lock, Unlock, Crown } from 'lucide-react';
 import { mockTeams } from '../../data/mockData';
 import { SkillBadge } from '../../components/ui/SkillBadge';
+import api from '../../api/client';
+import { Team } from '../../types';
 
 export default function TeamDetail() {
   const { id } = useParams();
-  const team = mockTeams.find(t => t.id === Number(id));
+  const [team, setTeam] = React.useState<Team | undefined>(() => mockTeams.find(t => t.id === Number(id)));
+
+  React.useEffect(() => {
+    if (!id) return;
+    api.get<Team>(`/teams/${id}`)
+      .then(response => setTeam(response.data))
+      .catch(() => setTeam(mockTeams.find(t => t.id === Number(id))));
+  }, [id]);
 
   if (!team) return (
     <div className="page-container" style={{ paddingTop: 40 }}>

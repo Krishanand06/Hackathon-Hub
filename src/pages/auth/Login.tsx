@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Code2, Eye, EyeOff, AlertCircle } from 'lucide-react';
+import { Code2, Eye, EyeOff, AlertCircle, GraduationCap, Shield, Scale, UserCheck } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useTheme } from '../../contexts/ThemeContext';
 import { Sun, Moon } from 'lucide-react';
@@ -15,6 +15,13 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
 
+  const demoAccounts = [
+    { role: 'STUDENT' as const, label: 'Student', email: 'demo@bits.edu', icon: <GraduationCap size={14} /> },
+    { role: 'MENTOR' as const, label: 'Mentor', email: 'mentor@bits.edu', icon: <UserCheck size={14} /> },
+    { role: 'JUDGE' as const, label: 'Judge', email: 'judge@bits.edu', icon: <Scale size={14} /> },
+    { role: 'ADMIN' as const, label: 'Admin', email: 'admin@bits.edu', icon: <Shield size={14} /> },
+  ];
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
@@ -25,20 +32,21 @@ export default function Login() {
     setLoading(true);
     try {
       await login(form.email, form.password);
-      navigate('/dashboard');
+      const email = form.email.toLowerCase();
+      navigate(email === 'admin@bits.edu' || email === 'judge@bits.edu' ? '/admin' : '/dashboard');
     } catch {
-      setError('Invalid email or password. Try demo@bits.edu / password');
+      setError('Invalid email or password. Try a demo email with any password.');
     } finally {
       setLoading(false);
     }
   };
 
-  const handleDemo = async () => {
+  const handleDemo = async (role: (typeof demoAccounts)[number]['role']) => {
     setLoading(true);
     setError('');
     try {
-      loginDemo();
-      navigate('/dashboard');
+      loginDemo(role);
+      navigate(role === 'ADMIN' || role === 'JUDGE' ? '/admin' : '/dashboard');
     } catch {
       setError('Demo login failed.');
       setLoading(false);
@@ -148,14 +156,27 @@ export default function Login() {
           }}>OR</span>
         </div>
 
-        <button
-          onClick={handleDemo}
-          className="gh-btn gh-btn-secondary"
-          disabled={loading}
-          style={{ width: '100%', justifyContent: 'center', padding: '8px 16px' }}
-        >
-          🚀 Continue with Demo Account
-        </button>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+          {demoAccounts.map(account => (
+            <button
+              key={account.role}
+              onClick={() => handleDemo(account.role)}
+              className="gh-btn gh-btn-secondary"
+              disabled={loading}
+              style={{
+                justifyContent: 'center',
+                padding: '8px 10px',
+                fontSize: 13,
+                gap: 6,
+                minWidth: 0,
+              }}
+              title={account.email}
+            >
+              {account.icon}
+              {account.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <p style={{ marginTop: '16px', fontSize: '13px', color: 'var(--color-text-secondary)' }}>

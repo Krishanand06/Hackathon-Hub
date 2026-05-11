@@ -159,25 +159,8 @@ export interface MentorBooking {
 export interface Resource {
   id: number;
   title: string;
-  description: string;
-  type: 'DOCUMENT' | 'VIDEO' | 'LINK' | 'TEMPLATE' | 'DATASET';
   url: string;
-  hackathonId?: number;
-  tags: string[];
-  uploadedBy: string;
-  uploadedAt: string;
-}
-
-export interface Venue {
-  id: number;
-  name: string;
-  description: string;
-  address: string;
-  capacity: number;
-  amenities: string[];
-  isAvailable: boolean;
-  hackathonId?: number;
-  imageUrl?: string;
+  displayOrder?: number;
 }
 
 // ============ REGISTRATION TYPES ============

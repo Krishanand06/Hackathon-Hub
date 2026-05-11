@@ -1,19 +1,37 @@
 import React, { useState } from 'react';
-import { mockLeaderboard, mockHackathons } from '../../data/mockData';
 import LeaderboardTable from '../../components/leaderboard/LeaderboardTable';
 import { RefreshCw } from 'lucide-react';
+import api from '../../api/client';
+import { Hackathon, LeaderboardEntry } from '../../types';
 
 export default function Leaderboard() {
   const [selectedHackathon, setSelectedHackathon] = useState<number | ''>('');
   const [refreshing, setRefreshing] = useState(false);
+  const [entries, setEntries] = useState<LeaderboardEntry[]>([]);
+  const [hackathons, setHackathons] = useState<Hackathon[]>([]);
 
-  const filtered = selectedHackathon
-    ? mockLeaderboard.filter(e => e.hackathonId === selectedHackathon)
-    : mockLeaderboard;
+  const loadLeaderboard = React.useCallback(() => {
+    const params = selectedHackathon ? { hackathonId: selectedHackathon } : undefined;
+    return api.get<LeaderboardEntry[]>('/leaderboard', { params })
+      .then(response => setEntries(Array.isArray(response.data) ? response.data : []))
+      .catch(() => setEntries([]));
+  }, [selectedHackathon]);
+
+  React.useEffect(() => {
+    api.get<Hackathon[]>('/hackathons')
+      .then(response => setHackathons(response.data))
+      .catch(() => setHackathons([]));
+  }, []);
+
+  React.useEffect(() => {
+    loadLeaderboard();
+  }, [loadLeaderboard]);
+
+  const filtered = entries;
 
   const handleRefresh = () => {
     setRefreshing(true);
-    setTimeout(() => setRefreshing(false), 800);
+    loadLeaderboard().finally(() => setRefreshing(false));
   };
 
   return (
@@ -39,7 +57,7 @@ export default function Leaderboard() {
             style={{ width: 'auto' }}
           >
             <option value="">All Hackathons</option>
-            {mockHackathons.map(h => <option key={h.id} value={h.id}>{h.title}</option>)}
+            {hackathons.map(h => <option key={h.id} value={h.id}>{h.title}</option>)}
           </select>
           <button
             onClick={handleRefresh}

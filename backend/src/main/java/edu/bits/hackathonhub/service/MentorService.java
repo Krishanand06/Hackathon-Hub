@@ -17,7 +17,7 @@ public class MentorService {
     private final UserRepository userRepository;
 
     public List<MentorSlot> getAvailableSlots(Long mentorId) {
-        return slotRepository.findByMentorIdAndIsBookedFalse(mentorId);
+        return slotRepository.findByMentorIdAndStatus(mentorId, MentorSlot.SlotStatus.AVAILABLE);
     }
 
     public MentorSlot bookSlot(Long slotId, Long userId) {

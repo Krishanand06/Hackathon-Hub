@@ -15,9 +15,10 @@ public class Team {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "team_id")
     private Long id;
 
-    @Column(nullable = false)
+    @Column(name = "team_name", nullable = false)
     private String name;
 
     @Column(columnDefinition = "TEXT")
@@ -39,9 +40,11 @@ public class Team {
     )
     private Set<User> members;
 
+    @Column(name = "max_size")
     private Integer maxSize;
+    @Column(name = "is_open")
     private boolean isOpen;
 
-    @ElementCollection
+    @Transient
     private Set<String> requiredSkills;
 }

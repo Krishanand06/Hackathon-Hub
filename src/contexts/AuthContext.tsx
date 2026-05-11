@@ -1,13 +1,16 @@
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { User, AuthState } from '../types';
+import { authApi } from '../api/auth';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  loginDemo: () => void;
+  loginDemo: (role?: DemoRole) => void;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   updateUser: (user: User) => void;
 }
+
+type DemoRole = 'STUDENT' | 'MENTOR' | 'JUDGE' | 'ADMIN';
 
 interface RegisterData {
   username: string;
@@ -18,6 +21,53 @@ interface RegisterData {
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
+
+const demoUsers: Record<DemoRole, User> = {
+  STUDENT: {
+    id: 2,
+    username: 'demo_user',
+    email: 'demo@bits.edu',
+    fullName: 'Demo Student',
+    role: 'STUDENT',
+    skills: ['React', 'Node.js', 'Python'],
+    bio: 'BITS Pilani CS student',
+  },
+  MENTOR: {
+    id: 201,
+    username: 'dr_ravi',
+    email: 'mentor@bits.edu',
+    fullName: 'Dr. Ravi Shankar',
+    role: 'MENTOR',
+    skills: ['Machine Learning', 'Python', 'Computer Vision'],
+    bio: 'Industry mentor for AI and ML teams',
+  },
+  JUDGE: {
+    id: 3,
+    username: 'judge_isha',
+    email: 'judge@bits.edu',
+    fullName: 'Isha Nair',
+    role: 'JUDGE',
+    skills: ['Product', 'Impact', 'Presentation'],
+    bio: 'Hackathon judge and product mentor',
+  },
+  ADMIN: {
+    id: 1,
+    username: 'admin',
+    email: 'admin@bits.edu',
+    fullName: 'System Admin',
+    role: 'ADMIN',
+    skills: ['Operations', 'Review', 'Platform Admin'],
+    bio: 'Platform administrator',
+  },
+};
+
+const demoEmailMap: Record<string, DemoRole> = {
+  'demo@bits.edu': 'STUDENT',
+  'student@bits.edu': 'STUDENT',
+  'mentor@bits.edu': 'MENTOR',
+  'judge@bits.edu': 'JUDGE',
+  'admin@bits.edu': 'ADMIN',
+};
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
@@ -50,29 +100,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (!email || !password) {
       throw new Error('Email and password are required');
     }
-    persistSession('demo-token', {
-      id: 1,
+
+    try {
+      const response = await authApi.login({ email, password });
+      persistSession(response.data.token, response.data.user);
+      return;
+    } catch {
+      // Fall back to demo personas while the local API/database is not running.
+    }
+
+    const demoRole = demoEmailMap[email.toLowerCase()];
+    if (demoRole) {
+      persistSession(`demo-${demoRole.toLowerCase()}-token`, demoUsers[demoRole]);
+      return;
+    }
+
+    persistSession('demo-student-token', {
+      ...demoUsers.STUDENT,
+      id: Date.now(),
       username: email.split('@')[0] || 'demo_user',
       email,
-      fullName: email === 'demo@bits.edu' ? 'Demo Student' : 'BITS Student',
-      role: 'STUDENT',
-      skills: ['React', 'Node.js', 'Python'],
-      bio: 'BITS Pilani CS student',
+      fullName: 'BITS Student',
     });
   };
 
-  const loginDemo = () => {
-    const token = 'demo-token';
-    const user: User = {
-      id: 1,
-      username: 'demo_user',
-      email: 'demo@bits.edu',
-      fullName: 'Demo Student',
-      role: 'STUDENT',
-      skills: ['React', 'Node.js', 'Python'],
-      bio: 'BITS Pilani CS student',
-    };
-    persistSession(token, user);
+  const loginDemo = (role: DemoRole = 'STUDENT') => {
+    persistSession(`demo-${role.toLowerCase()}-token`, demoUsers[role]);
   };
 
   const register = async (data: RegisterData) => {

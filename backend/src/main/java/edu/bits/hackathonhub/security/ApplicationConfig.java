@@ -21,7 +21,8 @@ public class ApplicationConfig {
 
     @Bean
     public UserDetailsService userDetailsService() {
-        return username -> userRepository.findByUsername(username)
+        return principal -> userRepository.findByEmail(principal)
+                .or(() -> userRepository.findByUsername(principal))
                 .orElseThrow(() -> new UsernameNotFoundException("User not found"));
     }
 
@@ -40,6 +41,21 @@ public class ApplicationConfig {
 
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        BCryptPasswordEncoder bcrypt = new BCryptPasswordEncoder();
+        return new PasswordEncoder() {
+            @Override
+            public String encode(CharSequence rawPassword) {
+                return bcrypt.encode(rawPassword);
+            }
+
+            @Override
+            public boolean matches(CharSequence rawPassword, String encodedPassword) {
+                if (encodedPassword != null && encodedPassword.startsWith("$2")) {
+                    return bcrypt.matches(rawPassword, encodedPassword);
+                }
+                // Backward compatibility for existing plain-text seeded demo data.
+                return encodedPassword != null && encodedPassword.equals(rawPassword.toString());
+            }
+        };
     }
 }

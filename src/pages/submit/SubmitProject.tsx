@@ -3,6 +3,7 @@ import { mockHackathons, mockTeams } from '../../data/mockData';
 import { Link } from 'react-router-dom';
 import { Github, ExternalLink, Upload } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import api from '../../api/client';
 
 export default function SubmitProject() {
   const { user } = useAuth();
@@ -17,6 +18,16 @@ export default function SubmitProject() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.hackathonId || !form.projectTitle || !form.repoUrl) return;
+    api.post('/submissions', {
+      hackathonId: Number(form.hackathonId),
+      teamId: form.teamId ? Number(form.teamId) : null,
+      userId: user?.id ?? 2,
+      projectTitle: form.projectTitle,
+      description: form.description,
+      repoUrl: form.repoUrl,
+      demoUrl: form.demoUrl || null,
+      techStack: form.techStack.split(',').map(item => item.trim()).filter(Boolean),
+    }).catch(() => undefined);
     setSubmitted(true);
   };
 

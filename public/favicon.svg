@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-labelledby="title">
-  <title id="title">BITS Hackathon Hub</title>
-  <rect width="64" height="64" rx="14" fill="#0d1117"/>
-  <path d="M19 22 9 32l10 10" fill="none" stroke="#e36209" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="m45 22 10 10-10 10" fill="none" stroke="#e36209" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
-  <path d="m37 16-10 32" fill="none" stroke="#f7b955" stroke-width="6" stroke-linecap="round"/>
-</svg>

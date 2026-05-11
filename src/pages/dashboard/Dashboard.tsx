@@ -1,399 +1,642 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { mockHackathons, mockTeams, mockSubmissions, mockMentors } from '../../data/mockData';
 import {
-  Trophy, Users, Code2, Calendar, Clock, ArrowRight,
-  Plus, Upload, BookOpen, Star, CheckCircle, AlertCircle
+  ArrowRight, BookOpen, Calendar, CheckCircle, Clock, Code2,
+  ExternalLink, Plus, Star, Trophy, Upload, Users,
 } from 'lucide-react';
+import api from '../../api/client';
+import { Mentor } from '../../types';
 
-function daysUntil(dateStr: string) {
-  const diff = new Date(dateStr).getTime() - Date.now();
-  return Math.ceil(diff / (1000 * 60 * 60 * 24));
+function formatDate(date: string) {
+  return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
-function formatDate(d: string) {
-  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+function formatTime(date: string) {
+  return new Date(date).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
 }
 
-// Mock: pretend current user is registered for hackathons 1 & 2, on team 1
+function getDaysLabel(date: string) {
+  const days = Math.ceil((new Date(date).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+  if (days < 0) return 'Closed';
+  if (days === 0) return 'Today';
+  if (days === 1) return 'Tomorrow';
+  return `${days} days`;
+}
+
 const MY_HACKATHON_IDS = [1, 2];
 const MY_TEAM_IDS = [1];
 const MY_SUBMISSION_IDS = [1];
 
+const statusClass: Record<string, string> = {
+  OPEN: 'gh-badge-green',
+  UPCOMING: 'gh-badge-yellow',
+  IN_PROGRESS: 'gh-badge-blue',
+  JUDGING: 'gh-badge-purple',
+  COMPLETED: 'gh-badge-gray',
+};
+
 export default function Dashboard() {
   const { user } = useAuth();
+
+  if (user?.role === 'MENTOR') {
+    return <MentorDashboard />;
+  }
 
   const myHackathons = mockHackathons.filter(h => MY_HACKATHON_IDS.includes(h.id));
   const myTeams = mockTeams.filter(t => MY_TEAM_IDS.includes(t.id));
   const mySubmissions = mockSubmissions.filter(s => MY_SUBMISSION_IDS.includes(s.id));
-  const mySessions = mockMentors.flatMap(m => 
-    m.availableSlots.filter(slot => slot.isBooked && MY_TEAM_IDS.includes(slot.bookedByTeamId || 0))
-    .map(slot => ({ ...slot, mentorName: m.fullName }))
-  );
-
-  const upcomingDeadlines = myHackathons
-    .filter(h => h.status !== 'COMPLETED')
-    .map(h => ({ title: h.title, date: h.endDate, type: 'Submission deadline' }))
-    .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
-    .slice(0, 4);
+  const mySessions = mockMentors.flatMap(mentor =>
+    mentor.availableSlots
+      .filter(slot => slot.isBooked && MY_TEAM_IDS.includes(slot.bookedByTeamId || 0))
+      .map(slot => ({
+        ...slot,
+        mentorName: mentor.fullName,
+        mentorRole: mentor.designation,
+        mentorCompany: mentor.company,
+        expertise: mentor.expertise.slice(0, 3),
+      }))
+  ).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
 
   const initials = user?.fullName
-    ? user.fullName.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
+    ? user.fullName.split(' ').map(part => part[0]).join('').toUpperCase().slice(0, 2)
     : '?';
 
-  const roleColors: Record<string, string> = {
-    STUDENT: 'gh-badge-blue', MENTOR: 'gh-badge-green',
-    JUDGE: 'gh-badge-purple', ADMIN: 'gh-badge-red',
-  };
-
-  const quickActions = [
-    { label: 'Browse Hackathons', icon: <Trophy size={15} />, to: '/hackathons', style: 'primary' },
-    { label: 'Find a Team', icon: <Users size={15} />, to: '/teams', style: 'secondary' },
-    { label: 'Submit Project', icon: <Upload size={15} />, to: '/submit', style: 'secondary' },
-    { label: 'Book Mentor', icon: <BookOpen size={15} />, to: '/mentors', style: 'secondary' },
-  ];
+  const firstName = user?.fullName?.split(' ')[0] ?? 'Student';
 
   return (
     <div className="page-container">
-      {/* Welcome header */}
-      <div style={{ marginBottom: 28, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12, borderLeft: '3px solid var(--color-brand)', paddingLeft: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <div className="avatar" style={{ width: 48, height: 48, fontSize: 18, backgroundColor: 'var(--color-brand-subtle)', color: 'var(--color-brand)', border: '2px solid var(--color-brand)' }}>{initials}</div>
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-              <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700 }}>
-                Hey, {user?.fullName?.split(' ')[0] ?? 'Student'} 👋
-              </h1>
-              <span className={`gh-badge ${roleColors[user?.role ?? 'STUDENT']}`} style={{ fontSize: 11 }}>
-                {user?.role ?? 'STUDENT'}
-              </span>
-            </div>
-            <p style={{ margin: '2px 0 0', color: 'var(--color-text-muted)', fontSize: 13 }}>
-              {user?.email}
-            </p>
-          </div>
-        </div>
-        <div style={{ display: 'flex', gap: 8 }}>
-          {quickActions.map(a => (
-            <Link key={a.label} to={a.to}
-              className={`gh-btn gh-btn-${a.style}`}
-              style={{ fontSize: 13, padding: '5px 12px', gap: 6, display: 'none' }}
-            />
-          ))}
-        </div>
-      </div>
-
-      {/* Stats row */}
-      <div style={{
-        display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-        gap: 1, backgroundColor: 'var(--color-border)',
-        border: '1px solid var(--color-border)', borderRadius: 6, overflow: 'hidden',
-        marginBottom: 28,
+      <section style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 16,
+        flexWrap: 'wrap',
+        marginBottom: 24,
+        paddingBottom: 18,
+        borderBottom: '1px solid var(--color-border)',
       }}>
-        {[
-          { label: 'Hackathons', value: myHackathons.length, icon: <Trophy size={16} />, color: 'var(--color-brand)' },
-          { label: 'Teams', value: myTeams.length, icon: <Users size={16} />, color: 'var(--color-accent)' },
-          { label: 'Submissions', value: mySubmissions.length, icon: <Code2 size={16} />, color: 'var(--color-done)' },
-          { label: 'Mentor Sessions', value: mySessions.length, icon: <Star size={16} />, color: 'var(--color-success)' },
-        ].map(s => (
-          <div key={s.label} style={{
-            backgroundColor: 'var(--color-bg-primary)',
-            padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 6,
-            borderTop: `3px solid ${s.color}`,
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
+          <div className="avatar" style={{
+            width: 48,
+            height: 48,
+            fontSize: 18,
+            backgroundColor: 'var(--color-brand-subtle)',
+            color: 'var(--color-brand)',
+            border: '2px solid var(--color-brand)',
+            flexShrink: 0,
           }}>
-            <span style={{ color: s.color }}>{s.icon}</span>
-            <span style={{ fontSize: 26, fontWeight: 700, color: 'var(--color-text-primary)', lineHeight: 1 }}>
-              {s.value}
-            </span>
-            <span style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{s.label}</span>
+            {initials}
           </div>
-        ))}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 300px', gap: 24, alignItems: 'start' }}>
-        {/* Left column */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-          {/* Quick actions */}
-          <div className="gh-card" style={{ padding: 16 }}>
-            <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Quick Actions
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>Dashboard</h1>
+            <p style={{ margin: '4px 0 0', color: 'var(--color-text-muted)', fontSize: 13 }}>
+              Welcome back, {firstName}. Track your hackathons and mentor sessions here.
             </p>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
-              {quickActions.map(a => (
-                <Link key={a.label} to={a.to}
-                  className={`gh-btn gh-btn-${a.style}`}
-                  style={{ justifyContent: 'center', fontSize: 13, padding: '7px 12px' }}
-                >
-                  {a.icon} {a.label}
-                </Link>
-              ))}
-            </div>
-          </div>
-
-          {/* My Hackathons */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Trophy size={16} color="var(--color-text-muted)" /> My Hackathons
-              </h2>
-              <Link to="/hackathons" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 3 }}>
-                Browse more <ArrowRight size={12} />
-              </Link>
-            </div>
-            {myHackathons.length === 0 ? (
-              <div className="gh-card" style={{ padding: '28px 20px', textAlign: 'center' }}>
-                <Trophy size={28} color="var(--color-text-muted)" style={{ marginBottom: 8 }} />
-                <p style={{ margin: '0 0 12px', color: 'var(--color-text-muted)', fontSize: 13 }}>
-                  You haven't registered for any hackathons yet.
-                </p>
-                <Link to="/hackathons" className="gh-btn gh-btn-primary" style={{ fontSize: 13 }}>
-                  <Plus size={13} /> Register Now
-                </Link>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {myHackathons.map(h => {
-                  const days = daysUntil(h.endDate);
-                  const statusColor: Record<string, string> = {
-                    OPEN: 'gh-badge-green', UPCOMING: 'gh-badge-yellow',
-                    IN_PROGRESS: 'gh-badge-blue', JUDGING: 'gh-badge-purple', COMPLETED: 'gh-badge-gray',
-                  };
-                  return (
-                    <div key={h.id} className="gh-card gh-card-interactive" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <Link to={`/hackathons/${h.id}`} style={{ fontWeight: 600, fontSize: 14, display: 'block', marginBottom: 3, color: 'var(--color-accent)' }}>
-                          {h.title}
-                        </Link>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--color-text-muted)' }}>
-                          <Calendar size={11} />
-                          {formatDate(h.startDate)} – {formatDate(h.endDate)}
-                          {h.prizePool && <span style={{ color: 'var(--color-success)' }}>· {h.prizePool}</span>}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                        <span className={`gh-badge ${statusColor[h.status]}`} style={{ fontSize: 11 }}>
-                          {h.status.replace('_', ' ')}
-                        </span>
-                        {days > 0 && h.status !== 'COMPLETED' && (
-                          <span style={{ fontSize: 11, color: days <= 3 ? 'var(--color-danger)' : 'var(--color-text-muted)' }}>
-                            {days}d remaining
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* My Teams */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Users size={16} color="var(--color-text-muted)" /> My Teams
-              </h2>
-              <Link to="/teams" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 3 }}>
-                Find team <ArrowRight size={12} />
-              </Link>
-            </div>
-            {myTeams.length === 0 ? (
-              <div className="gh-card" style={{ padding: '28px 20px', textAlign: 'center' }}>
-                <Users size={28} color="var(--color-text-muted)" style={{ marginBottom: 8 }} />
-                <p style={{ margin: '0 0 12px', color: 'var(--color-text-muted)', fontSize: 13 }}>
-                  Not on a team yet. Join one or create your own.
-                </p>
-                <Link to="/teams" className="gh-btn gh-btn-secondary" style={{ fontSize: 13 }}>
-                  <Plus size={13} /> Find a Team
-                </Link>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {myTeams.map(t => (
-                  <div key={t.id} className="gh-card gh-card-interactive" style={{ padding: '12px 16px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{ flex: 1 }}>
-                      <Link to={`/teams/${t.id}`} style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-accent)' }}>{t.name}</Link>
-                      <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 3 }}>
-                        {t.hackathonTitle} · {t.members.length}/{t.maxSize} members
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex' }}>
-                      {t.members.slice(0, 4).map((m, i) => (
-                        <div key={m.id} className="avatar" title={m.fullName} style={{
-                          width: 26, height: 26, fontSize: 10,
-                          marginLeft: i > 0 ? -6 : 0,
-                          border: '2px solid var(--color-bg-primary)', zIndex: 4 - i,
-                        }}>
-                          {m.fullName[0]}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* My Submissions */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Code2 size={16} color="var(--color-text-muted)" /> My Submissions
-              </h2>
-              <Link to="/submit" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 3 }}>
-                New submission <ArrowRight size={12} />
-              </Link>
-            </div>
-            {mySubmissions.length === 0 ? (
-              <div className="gh-card" style={{ padding: '28px 20px', textAlign: 'center' }}>
-                <Code2 size={28} color="var(--color-text-muted)" style={{ marginBottom: 8 }} />
-                <p style={{ margin: '0 0 12px', color: 'var(--color-text-muted)', fontSize: 13 }}>No submissions yet.</p>
-                <Link to="/submit" className="gh-btn gh-btn-secondary" style={{ fontSize: 13 }}>
-                  <Upload size={13} /> Submit Project
-                </Link>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {mySubmissions.map(s => {
-                  const statusIcon = s.status === 'EVALUATED'
-                    ? <CheckCircle size={13} color="var(--color-success)" />
-                    : <AlertCircle size={13} color="var(--color-warning)" />;
-                  return (
-                    <div key={s.id} className="gh-card gh-card-interactive" style={{ padding: '12px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
-                      <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 3 }}>{s.projectTitle}</div>
-                        <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>
-                          Team: {s.teamName} · Submitted {formatDate(s.submittedAt)}
-                        </div>
-                      </div>
-                      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}>
-                        <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 12, color: 'var(--color-text-secondary)' }}>
-                          {statusIcon} {s.status.replace('_', ' ')}
-                        </span>
-                        {s.score !== undefined && (
-                          <span style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-accent)' }}>
-                            {s.score}/100
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-
-          {/* My Sessions */}
-          <div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-              <h2 style={{ margin: 0, fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}>
-                <Star size={16} color="var(--color-text-muted)" /> My Mentor Sessions
-              </h2>
-              <Link to="/mentors" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 3 }}>
-                Book session <ArrowRight size={12} />
-              </Link>
-            </div>
-            {mySessions.length === 0 ? (
-              <div className="gh-card" style={{ padding: '28px 20px', textAlign: 'center' }}>
-                <Star size={28} color="var(--color-text-muted)" style={{ marginBottom: 8 }} />
-                <p style={{ margin: '0 0 12px', color: 'var(--color-text-muted)', fontSize: 13 }}>No sessions booked.</p>
-                <Link to="/mentors" className="gh-btn gh-btn-secondary" style={{ fontSize: 13 }}>
-                  <Plus size={13} /> Book a Mentor
-                </Link>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {mySessions.map(session => (
-                  <div key={session.id} className="gh-card gh-card-interactive" style={{ padding: '12px 16px', display: 'flex', gap: 12, alignItems: 'center' }}>
-                    <div style={{ flex: 1 }}>
-                      <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 3 }}>{session.mentorName}</div>
-                      <div style={{ fontSize: 12, color: 'var(--color-text-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                        <Clock size={11} /> {formatDate(session.startTime)} at {new Date(session.startTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                      </div>
-                    </div>
-                    <span className="gh-badge gh-badge-green" style={{ fontSize: 11 }}>CONFIRMED</span>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Link to="/hackathons" className="gh-btn gh-btn-primary" style={{ fontSize: 13 }}>
+            <Trophy size={14} /> Browse Hackathons
+          </Link>
+          <Link to="/mentors" className="gh-btn gh-btn-secondary" style={{ fontSize: 13 }}>
+            <BookOpen size={14} /> Book Mentor
+          </Link>
+        </div>
+      </section>
 
-        {/* Right sidebar */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-          {/* Upcoming Deadlines */}
-          <div className="gh-card" style={{ padding: 16 }}>
-            <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px', display: 'flex', alignItems: 'center', gap: 6 }}>
-              <Clock size={12} /> Upcoming Deadlines
-            </p>
-            {upcomingDeadlines.length === 0 ? (
-              <p style={{ margin: 0, fontSize: 13, color: 'var(--color-text-muted)' }}>No upcoming deadlines.</p>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                {upcomingDeadlines.map((d, i) => {
-                  const days = daysUntil(d.date);
-                  const urgent = days <= 3;
-                  return (
-                    <div key={i} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, paddingBottom: 10, borderBottom: i < upcomingDeadlines.length - 1 ? '1px solid var(--color-border)' : 'none' }}>
-                      <div>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--color-text-primary)', marginBottom: 2 }}>{d.title}</div>
-                        <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{d.type}</div>
-                      </div>
-                      <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                        <div style={{ fontSize: 12, fontWeight: 600, color: urgent ? 'var(--color-danger)' : 'var(--color-text-secondary)' }}>
-                          {days <= 0 ? 'Today' : `${days}d`}
-                        </div>
-                        <div style={{ fontSize: 11, color: 'var(--color-text-muted)' }}>{formatDate(d.date)}</div>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+      <div className="dashboard-focus-grid">
+        <section className="gh-card" style={{ padding: 20, borderTop: '3px solid var(--color-brand)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 16 }}>
+            <div>
+              <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: 'var(--color-brand)', textTransform: 'uppercase', letterSpacing: 0 }}>
+                Enrolled Hackathons
+              </p>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{myHackathons.length} active registrations</h2>
+            </div>
+            <Link to="/hackathons" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+              View all <ArrowRight size={12} />
+            </Link>
           </div>
 
-          {/* Profile quick view */}
-          {user?.skills && user.skills.length > 0 && (
-            <div className="gh-card" style={{ padding: 16 }}>
-              <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                My Skills
-              </p>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {user.skills.map(s => (
-                  <span key={s} className="gh-badge gh-badge-gray" style={{ fontSize: 11 }}>{s}</span>
-                ))}
-              </div>
+          {myHackathons.length === 0 ? (
+            <EmptyState
+              icon={<Trophy size={28} />}
+              title="No hackathons yet"
+              body="Register for a hackathon to start your workspace."
+              action={<Link to="/hackathons" className="gh-btn gh-btn-primary"><Plus size={14} /> Find Hackathons</Link>}
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              {myHackathons.map(hackathon => {
+                const team = myTeams.find(t => t.hackathonId === hackathon.id);
+                const submission = mySubmissions.find(s => s.hackathonId === hackathon.id);
+                return (
+                  <article key={hackathon.id} style={{
+                    paddingBottom: 14,
+                    borderBottom: '1px solid var(--color-border)',
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 8 }}>
+                      <div style={{ minWidth: 0 }}>
+                        <Link to={`/hackathons/${hackathon.id}`} style={{ fontSize: 16, fontWeight: 700, color: 'var(--color-accent)' }}>
+                          {hackathon.title}
+                        </Link>
+                        <p style={{ margin: '4px 0 0', color: 'var(--color-text-secondary)', fontSize: 13, lineHeight: 1.5 }}>
+                          {hackathon.theme}
+                        </p>
+                      </div>
+                      <span className={`gh-badge ${statusClass[hackathon.status]}`} style={{ flexShrink: 0 }}>
+                        {hackathon.status.replace('_', ' ')}
+                      </span>
+                    </div>
+
+                    <div style={{
+                      display: 'grid',
+                      gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+                      gap: 10,
+                      marginBottom: 12,
+                    }}>
+                      <MiniMetric icon={<Calendar size={13} />} label="Dates" value={`${formatDate(hackathon.startDate)} - ${formatDate(hackathon.endDate)}`} />
+                      <MiniMetric icon={<Users size={13} />} label="Team" value={team ? `${team.name} (${team.members.length}/${team.maxSize})` : 'Not assigned'} />
+                      <MiniMetric icon={<Clock size={13} />} label="Deadline" value={getDaysLabel(hackathon.endDate)} />
+                    </div>
+
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                      <Link to={`/hackathons/${hackathon.id}`} className="gh-btn gh-btn-secondary" style={{ fontSize: 12, padding: '4px 10px' }}>
+                        Details <ExternalLink size={12} />
+                      </Link>
+                      <Link to={submission ? '/dashboard' : '/submit'} className="gh-btn gh-btn-primary" style={{ fontSize: 12, padding: '4px 10px' }}>
+                        {submission ? <CheckCircle size={12} /> : <Upload size={12} />}
+                        {submission ? 'Submitted' : 'Submit Project'}
+                      </Link>
+                    </div>
+                  </article>
+                );
+              })}
             </div>
           )}
+        </section>
 
-          {/* Explore */}
-          <div className="gh-card" style={{ padding: 16 }}>
-            <p style={{ margin: '0 0 12px', fontSize: 12, fontWeight: 600, color: 'var(--color-text-muted)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-              Explore
-            </p>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              {[
-                { to: '/leaderboard', label: '🏆 Live Leaderboard' },
-                { to: '/mentors', label: '📅 Book a Mentor' },
-                { to: '/resources', label: '📚 Resources & Venues' },
-              ].map(link => (
-                <Link key={link.to} to={link.to} className="nav-item" style={{ borderRadius: 4 }}>
-                  {link.label}
-                </Link>
+        <section className="gh-card" style={{ padding: 20, borderTop: '3px solid var(--color-success)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 16 }}>
+            <div>
+              <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: 'var(--color-success)', textTransform: 'uppercase', letterSpacing: 0 }}>
+                Mentor Sessions
+              </p>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{mySessions.length} booked session{mySessions.length === 1 ? '' : 's'}</h2>
+            </div>
+            <Link to="/mentors" style={{ fontSize: 12, display: 'flex', alignItems: 'center', gap: 4 }}>
+              Book more <ArrowRight size={12} />
+            </Link>
+          </div>
+
+          {mySessions.length === 0 ? (
+            <EmptyState
+              icon={<Star size={28} />}
+              title="No sessions booked"
+              body="Book a focused session with a mentor before your next milestone."
+              action={<Link to="/mentors" className="gh-btn gh-btn-primary"><Plus size={14} /> Book Mentor</Link>}
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {mySessions.map(session => (
+                <article key={session.id} style={{
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 6,
+                  padding: 14,
+                  backgroundColor: 'var(--color-bg-secondary)',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>{session.mentorName}</div>
+                      <div style={{ color: 'var(--color-text-muted)', fontSize: 12, marginTop: 3 }}>
+                        {session.mentorRole} at {session.mentorCompany}
+                      </div>
+                    </div>
+                    <span className="gh-badge gh-badge-green" style={{ height: 22 }}>Confirmed</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-secondary)', fontSize: 13, marginBottom: 10 }}>
+                    <Clock size={13} />
+                    {formatDate(session.startTime)} at {formatTime(session.startTime)}
+                  </div>
+                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                    {session.expertise.map(skill => (
+                      <span key={skill} className="gh-badge gh-badge-gray" style={{ fontSize: 11 }}>{skill}</span>
+                    ))}
+                  </div>
+                </article>
               ))}
             </div>
-          </div>
-        </div>
+          )}
+        </section>
       </div>
 
-      {/* Responsive: hide sidebar on mobile */}
+      <div className="dashboard-support-grid">
+        <section className="gh-card" style={{ padding: 16 }}>
+          <PanelHeader icon={<Users size={15} />} title="Team Snapshot" action={<Link to="/teams">Manage</Link>} />
+          {myTeams.length === 0 ? (
+            <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 13 }}>You are not on a team yet.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {myTeams.map(team => (
+                <div key={team.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center' }}>
+                  <div style={{ minWidth: 0 }}>
+                    <Link to={`/teams/${team.id}`} style={{ fontSize: 14, fontWeight: 600, color: 'var(--color-accent)' }}>{team.name}</Link>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: 12, marginTop: 2 }}>{team.hackathonTitle}</div>
+                  </div>
+                  <span style={{ color: 'var(--color-text-secondary)', fontSize: 12 }}>{team.members.length}/{team.maxSize}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="gh-card" style={{ padding: 16 }}>
+          <PanelHeader icon={<Code2 size={15} />} title="Submissions" action={<Link to="/submit">New</Link>} />
+          {mySubmissions.length === 0 ? (
+            <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 13 }}>No project submitted yet.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {mySubmissions.map(submission => (
+                <div key={submission.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 14 }}>{submission.projectTitle}</div>
+                    <div style={{ color: 'var(--color-text-muted)', fontSize: 12, marginTop: 2 }}>{submission.teamName}</div>
+                  </div>
+                  <span style={{ color: 'var(--color-accent)', fontSize: 13, fontWeight: 700 }}>
+                    {submission.score ? `${submission.score}/100` : submission.status}
+                  </span>
+                </div>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="gh-card" style={{ padding: 16 }}>
+          <PanelHeader icon={<Clock size={15} />} title="Quick Actions" />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <Link to="/hackathons" className="gh-btn gh-btn-secondary" style={{ justifyContent: 'center', fontSize: 12 }}>
+              <Trophy size={13} /> Hackathons
+            </Link>
+            <Link to="/mentors" className="gh-btn gh-btn-secondary" style={{ justifyContent: 'center', fontSize: 12 }}>
+              <BookOpen size={13} /> Mentors
+            </Link>
+            <Link to="/teams" className="gh-btn gh-btn-secondary" style={{ justifyContent: 'center', fontSize: 12 }}>
+              <Users size={13} /> Teams
+            </Link>
+            <Link to="/submit" className="gh-btn gh-btn-secondary" style={{ justifyContent: 'center', fontSize: 12 }}>
+              <Upload size={13} /> Submit
+            </Link>
+          </div>
+        </section>
+      </div>
+
       <style>{`
-        @media (max-width: 768px) {
-          .dashboard-grid { grid-template-columns: 1fr !important; }
+        .dashboard-focus-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1.35fr) minmax(320px, 0.85fr);
+          gap: 20px;
+          align-items: start;
+          margin-bottom: 20px;
+        }
+
+        .dashboard-support-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 16px;
+          align-items: start;
+        }
+
+        @media (max-width: 980px) {
+          .dashboard-focus-grid,
+          .dashboard-support-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+
+        @media (max-width: 640px) {
+          .dashboard-focus-grid section,
+          .dashboard-support-grid section {
+            padding: 16px !important;
+          }
         }
       `}</style>
+    </div>
+  );
+}
+
+function MentorDashboard() {
+  const { user } = useAuth();
+  const [mentors, setMentors] = useState<Mentor[]>(mockMentors);
+  const mentor = mentors.find(m => m.userId === user?.id) ?? mockMentors[0];
+  type MentorDashboardSlot = {
+    id: number;
+    startTime: string;
+    endTime: string;
+    isBooked: boolean;
+    bookedByTeamId?: number;
+  };
+  const baseSlots: MentorDashboardSlot[] = mentor.availableSlots;
+  const [slotStatus, setSlotStatus] = useState<Record<number, boolean>>(
+    Object.fromEntries(baseSlots.map(slot => [slot.id, !slot.isBooked]))
+  );
+  const [customSlots, setCustomSlots] = useState<MentorDashboardSlot[]>([]);
+  const [newSlot, setNewSlot] = useState({ date: '', startTime: '', endTime: '' });
+
+  React.useEffect(() => {
+    api.get<Mentor[]>('/mentors')
+      .then(response => setMentors(response.data))
+      .catch(() => setMentors(mockMentors));
+  }, []);
+
+  const allSlots = [...baseSlots, ...customSlots].sort(
+    (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
+  );
+
+  const bookings = allSlots
+    .filter(slot => slot.isBooked)
+    .map(slot => {
+      const team = mockTeams.find(t => t.id === slot.bookedByTeamId);
+      return { ...slot, teamName: team?.name ?? 'Assigned team', hackathonTitle: team?.hackathonTitle ?? 'Hackathon' };
+    });
+
+  const availableSlots = allSlots.filter(slot => !slot.isBooked);
+
+  const addSlot = (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!newSlot.date || !newSlot.startTime || !newSlot.endTime) return;
+
+    const id = Date.now();
+    const slot = {
+      id,
+      startTime: `${newSlot.date}T${newSlot.startTime}`,
+      endTime: `${newSlot.date}T${newSlot.endTime}`,
+      isBooked: false,
+    };
+
+    api.post('/mentor-slots', {
+      mentorId: mentor.id,
+      startTime: slot.startTime,
+      endTime: slot.endTime,
+    }).then(response => {
+      const savedSlot = { ...slot, id: response.data.id };
+      setCustomSlots(prev => [...prev, savedSlot]);
+      setSlotStatus(prev => ({ ...prev, [savedSlot.id]: true }));
+    }).catch(() => {
+      setCustomSlots(prev => [...prev, slot]);
+      setSlotStatus(prev => ({ ...prev, [id]: true }));
+    });
+    setNewSlot({ date: '', startTime: '', endTime: '' });
+  };
+
+  const initials = user?.fullName
+    ? user.fullName.split(' ').map(part => part[0]).join('').toUpperCase().slice(0, 2)
+    : 'M';
+
+  return (
+    <div className="page-container">
+      <section style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 16,
+        flexWrap: 'wrap',
+        marginBottom: 24,
+        paddingBottom: 18,
+        borderBottom: '1px solid var(--color-border)',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 14, minWidth: 0 }}>
+          <div className="avatar" style={{
+            width: 48,
+            height: 48,
+            fontSize: 18,
+            backgroundColor: 'var(--color-success-subtle)',
+            color: 'var(--color-success)',
+            border: '2px solid var(--color-success)',
+            flexShrink: 0,
+          }}>
+            {initials}
+          </div>
+          <div style={{ minWidth: 0 }}>
+            <h1 style={{ margin: 0, fontSize: 24, fontWeight: 700 }}>Mentor Dashboard</h1>
+            <p style={{ margin: '4px 0 0', color: 'var(--color-text-muted)', fontSize: 13 }}>
+              Manage booked sessions and choose which slots are available to teams.
+            </p>
+          </div>
+        </div>
+        <Link to="/mentors" className="gh-btn gh-btn-secondary" style={{ fontSize: 13 }}>
+          <BookOpen size={14} /> Public Mentor Page
+        </Link>
+      </section>
+
+      <div className="dashboard-focus-grid">
+        <section className="gh-card" style={{ padding: 20, borderTop: '3px solid var(--color-success)' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'flex-start', marginBottom: 16 }}>
+            <div>
+              <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: 'var(--color-success)', textTransform: 'uppercase', letterSpacing: 0 }}>
+                Current Bookings
+              </p>
+              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{bookings.length} booked session{bookings.length === 1 ? '' : 's'}</h2>
+            </div>
+            <span className="gh-badge gh-badge-green">{mentor.rating.toFixed(1)} rating</span>
+          </div>
+
+          {bookings.length === 0 ? (
+            <EmptyState
+              icon={<Calendar size={28} />}
+              title="No bookings yet"
+              body="Teams will appear here when they book one of your available slots."
+              action={<Link to="/mentors" className="gh-btn gh-btn-primary"><BookOpen size={14} /> View Profile</Link>}
+            />
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {bookings.map(slot => (
+                <article key={slot.id} style={{
+                  border: '1px solid var(--color-border)',
+                  borderRadius: 6,
+                  padding: 14,
+                  backgroundColor: 'var(--color-bg-secondary)',
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>{slot.teamName}</div>
+                      <div style={{ color: 'var(--color-text-muted)', fontSize: 12, marginTop: 3 }}>{slot.hackathonTitle}</div>
+                    </div>
+                    <span className="gh-badge gh-badge-green" style={{ height: 22 }}>Confirmed</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: 'var(--color-text-secondary)', fontSize: 13 }}>
+                    <Clock size={13} />
+                    {formatDate(slot.startTime)} at {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                  </div>
+                </article>
+              ))}
+            </div>
+          )}
+        </section>
+
+        <section className="gh-card" style={{ padding: 20, borderTop: '3px solid var(--color-brand)' }}>
+          <div style={{ marginBottom: 16 }}>
+            <p style={{ margin: '0 0 4px', fontSize: 12, fontWeight: 700, color: 'var(--color-brand)', textTransform: 'uppercase', letterSpacing: 0 }}>
+              Availability
+            </p>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Choose Available Slots</h2>
+          </div>
+
+          <form onSubmit={addSlot} style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr 1fr auto', gap: 8, marginBottom: 16 }}>
+            <input className="gh-input" type="date" value={newSlot.date} onChange={event => setNewSlot(prev => ({ ...prev, date: event.target.value }))} />
+            <input className="gh-input" type="time" value={newSlot.startTime} onChange={event => setNewSlot(prev => ({ ...prev, startTime: event.target.value }))} />
+            <input className="gh-input" type="time" value={newSlot.endTime} onChange={event => setNewSlot(prev => ({ ...prev, endTime: event.target.value }))} />
+            <button className="gh-btn gh-btn-primary" type="submit" style={{ justifyContent: 'center' }}>
+              <Plus size={14} />
+            </button>
+          </form>
+
+          {availableSlots.length === 0 ? (
+            <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 13 }}>No open slots. Add a slot above when you are available.</p>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              {availableSlots.map(slot => (
+                <label key={slot.id} className="gh-card" style={{
+                  padding: 12,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'space-between',
+                  gap: 12,
+                  cursor: 'pointer',
+                  backgroundColor: slotStatus[slot.id] ? 'var(--color-bg-primary)' : 'var(--color-bg-secondary)',
+                }}>
+                  <span>
+                    <span style={{ display: 'block', fontWeight: 700, fontSize: 14 }}>
+                      {formatDate(slot.startTime)}
+                    </span>
+                    <span style={{ color: 'var(--color-text-muted)', fontSize: 12 }}>
+                      {formatTime(slot.startTime)} - {formatTime(slot.endTime)}
+                    </span>
+                  </span>
+                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-text-secondary)' }}>
+                    {slotStatus[slot.id] ? 'Available' : 'Hidden'}
+                    <input
+                      type="checkbox"
+                      checked={slotStatus[slot.id] ?? true}
+                      onChange={event => {
+                        const isAvailable = event.target.checked;
+                        api.patch(`/mentor-slots/${slot.id}`, { isAvailable }).catch(() => undefined);
+                        setSlotStatus(prev => ({ ...prev, [slot.id]: isAvailable }));
+                      }}
+                    />
+                  </span>
+                </label>
+              ))}
+            </div>
+          )}
+        </section>
+      </div>
+
+      <div className="dashboard-support-grid">
+        <section className="gh-card" style={{ padding: 16 }}>
+          <PanelHeader icon={<Star size={15} />} title="Mentor Profile" action={<Link to="/mentors">Preview</Link>} />
+          <div style={{ color: 'var(--color-text-secondary)', fontSize: 13, lineHeight: 1.6 }}>
+            <strong style={{ color: 'var(--color-text-primary)' }}>{mentor.designation}</strong>
+            <br />
+            {mentor.company}
+          </div>
+        </section>
+
+        <section className="gh-card" style={{ padding: 16 }}>
+          <PanelHeader icon={<Code2 size={15} />} title="Expertise" />
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {mentor.expertise.map(skill => (
+              <span key={skill} className="gh-badge gh-badge-gray" style={{ fontSize: 11 }}>{skill}</span>
+            ))}
+          </div>
+        </section>
+
+        <section className="gh-card" style={{ padding: 16 }}>
+          <PanelHeader icon={<Clock size={15} />} title="Session Stats" />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <MiniMetric icon={<CheckCircle size={13} />} label="Total" value={String(mentor.totalSessions)} />
+            <MiniMetric icon={<Calendar size={13} />} label="Open" value={String(availableSlots.filter(slot => slotStatus[slot.id]).length)} />
+          </div>
+        </section>
+      </div>
+
+      <style>{`
+        .dashboard-focus-grid {
+          display: grid;
+          grid-template-columns: minmax(0, 1fr) minmax(320px, 0.9fr);
+          gap: 20px;
+          align-items: start;
+          margin-bottom: 20px;
+        }
+
+        .dashboard-support-grid {
+          display: grid;
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+          gap: 16px;
+          align-items: start;
+        }
+
+        @media (max-width: 980px) {
+          .dashboard-focus-grid,
+          .dashboard-support-grid {
+            grid-template-columns: 1fr;
+          }
+        }
+      `}</style>
+    </div>
+  );
+}
+
+function MiniMetric({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+  return (
+    <div style={{
+      border: '1px solid var(--color-border)',
+      borderRadius: 6,
+      padding: '9px 10px',
+      minWidth: 0,
+      backgroundColor: 'var(--color-bg-secondary)',
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: 'var(--color-text-muted)', fontSize: 11, marginBottom: 4 }}>
+        {icon} {label}
+      </div>
+      <div style={{ color: 'var(--color-text-primary)', fontSize: 12, fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+        {value}
+      </div>
+    </div>
+  );
+}
+
+function EmptyState({ icon, title, body, action }: { icon: React.ReactNode; title: string; body: string; action: React.ReactNode }) {
+  return (
+    <div style={{
+      minHeight: 220,
+      display: 'flex',
+      flexDirection: 'column',
+      alignItems: 'center',
+      justifyContent: 'center',
+      textAlign: 'center',
+      color: 'var(--color-text-muted)',
+      border: '1px dashed var(--color-border)',
+      borderRadius: 6,
+      padding: 24,
+    }}>
+      <div style={{ color: 'var(--color-brand)', marginBottom: 10 }}>{icon}</div>
+      <div style={{ color: 'var(--color-text-primary)', fontWeight: 700, marginBottom: 4 }}>{title}</div>
+      <p style={{ margin: '0 0 14px', fontSize: 13, maxWidth: 280, lineHeight: 1.5 }}>{body}</p>
+      {action}
+    </div>
+  );
+}
+
+function PanelHeader({ icon, title, action }: { icon: React.ReactNode; title: string; action?: React.ReactNode }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, marginBottom: 12 }}>
+      <h2 style={{ margin: 0, fontSize: 14, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ color: 'var(--color-text-muted)', display: 'flex' }}>{icon}</span>
+        {title}
+      </h2>
+      {action && <div style={{ fontSize: 12 }}>{action}</div>}
     </div>
   );
 }

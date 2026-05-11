@@ -3,8 +3,6 @@ package edu.bits.hackathonhub.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.Set;
-
 @Entity
 @Table(name = "resources")
 @Data
@@ -15,20 +13,18 @@ public class Resource {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "resource_id")
     private Long id;
 
     @Column(nullable = false)
     private String title;
 
-    @Column(columnDefinition = "TEXT")
-    private String description;
-
     @Column(nullable = false)
     private String url;
 
-    @Column(nullable = false)
-    private String type; // e.g., DOCUMENT, VIDEO, LINK, DATASET, TEMPLATE
+    @Column(name = "display_order")
+    private Integer displayOrder;
 
-    @ElementCollection
-    private Set<String> tags;
+    @Column(name = "is_active")
+    private boolean isActive;
 }

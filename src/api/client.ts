@@ -1,7 +1,9 @@
 import axios from 'axios';
 
 // Use environment variable for API URL in production, fallback to localhost for development
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8080/api';
+// Local dev: /api (proxied to http://localhost:8080 via Vite)
+// Production (Vercel): requires VITE_API_URL environment variable pointing to Spring Boot backend
+const API_BASE_URL = import.meta.env.VITE_API_URL || '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

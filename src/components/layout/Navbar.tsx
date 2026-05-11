@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  Sun, Moon, Bell, ChevronDown, LogOut, User, Settings,
+  Sun, Moon, Bell, ChevronDown, LogOut, User,
   Trophy, Menu, X, Code2
 } from 'lucide-react';
 import { useTheme } from '../../contexts/ThemeContext';
@@ -150,9 +150,6 @@ export default function Navbar() {
                       </div>
                       <Link to="/dashboard" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
                         <User size={14} /> Dashboard
-                      </Link>
-                      <Link to="/profile" className="dropdown-item" onClick={() => setDropdownOpen(false)}>
-                        <Settings size={14} /> Settings
                       </Link>
                       {user?.role === 'ADMIN' && (
                         <Link to="/admin" className="dropdown-item" onClick={() => setDropdownOpen(false)}>

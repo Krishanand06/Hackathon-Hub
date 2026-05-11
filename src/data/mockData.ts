@@ -1,4 +1,4 @@
-import { Hackathon, Team, Mentor, LeaderboardEntry, Resource, Venue, Submission } from '../types';
+import { Hackathon, Team, Mentor, LeaderboardEntry, Resource, Submission } from '../types';
 
 // ─── HACKATHONS ───────────────────────────────────────────────────────────────
 export const mockHackathons: Hackathon[] = [
@@ -155,20 +155,11 @@ export const mockLeaderboard: LeaderboardEntry[] = [
 
 // ─── RESOURCES ───────────────────────────────────────────────────────────────
 export const mockResources: Resource[] = [
-  { id: 1, title: 'Getting Started with React + Vite', description: 'Official setup guide for React 18 with Vite bundler.', type: 'LINK', url: 'https://vitejs.dev/guide/', tags: ['React', 'Vite', 'Frontend'], uploadedBy: 'Admin', uploadedAt: '2025-05-01' },
-  { id: 2, title: 'Spring Boot REST API Template', description: 'Boilerplate Spring Boot project with JWT auth, JPA, and MySQL configuration ready to use.', type: 'TEMPLATE', url: '#', tags: ['Java', 'Spring Boot', 'Backend'], uploadedBy: 'Admin', uploadedAt: '2025-05-01' },
-  { id: 3, title: 'Hackathon Pitch Deck Template', description: '10-slide PowerPoint template for presenting your hackathon project to judges.', type: 'DOCUMENT', url: '#', tags: ['Presentation', 'Design'], uploadedBy: 'Admin', uploadedAt: '2025-05-02' },
-  { id: 4, title: 'ML Project Starter Kit', description: 'Jupyter notebooks with data preprocessing, model training, and evaluation templates.', type: 'DATASET', url: '#', tags: ['Machine Learning', 'Python', 'Datasets'], uploadedBy: 'Admin', uploadedAt: '2025-05-03' },
-  { id: 5, title: 'System Design Crash Course', description: 'YouTube playlist covering scalable system design patterns used in FAANG companies.', type: 'VIDEO', url: '#', tags: ['System Design', 'Architecture'], uploadedBy: 'Admin', uploadedAt: '2025-05-03' },
-  { id: 6, title: 'Docker & Kubernetes Quickstart', description: 'Step-by-step tutorial for containerizing your app and deploying to Kubernetes.', type: 'DOCUMENT', url: '#', tags: ['Docker', 'Kubernetes', 'DevOps'], uploadedBy: 'Admin', uploadedAt: '2025-05-04' },
-];
-
-// ─── VENUES ───────────────────────────────────────────────────────────────────
-export const mockVenues: Venue[] = [
-  { id: 1, name: 'Innovation Hub — Main Hall', description: 'Main auditorium with 500-seat capacity. Equipped with high-speed WiFi, power outlets at every seat, and 4K projection system.', address: 'BITS Pilani, Vidya Vihar, Rajasthan 333031', capacity: 500, amenities: ['WiFi', 'Power Outlets', 'Projector', 'AC', 'Cafeteria'], isAvailable: true },
-  { id: 2, name: 'CS Department Lab Complex', description: 'State-of-the-art computer lab with 120 high-end workstations. Ideal for hardware hackathons with soldering stations available.', address: 'BITS Pilani, CS Block', capacity: 120, amenities: ['Workstations', 'WiFi', 'Soldering Equipment', 'Power', 'AC'], isAvailable: true, hackathonId: 1 },
-  { id: 3, name: 'Hyderabad Campus Auditorium', description: 'Modern auditorium with breakout rooms and a dedicated maker-space for IoT projects.', address: 'BITS Hyderabad, Shameerpet, Hyderabad 500078', capacity: 300, amenities: ['WiFi', 'Maker Space', 'Projector', 'Cafeteria', 'AC'], isAvailable: false, hackathonId: 3 },
-  { id: 4, name: 'Goa Campus Conference Center', description: 'Beachside conference center with panoramic views. Great for creative hackathons.', address: 'BITS Goa, NH-17B, Zuarinagar, Goa 403726', capacity: 200, amenities: ['WiFi', 'AC', 'Projector', 'Outdoor Space', 'Cafeteria'], isAvailable: true },
+  { id: 1, title: 'React + Vite Guide', url: 'https://vitejs.dev/guide/', displayOrder: 1 },
+  { id: 2, title: 'Spring Boot Guides', url: 'https://spring.io/guides', displayOrder: 2 },
+  { id: 3, title: 'GitHub Docs', url: 'https://docs.github.com/', displayOrder: 3 },
+  { id: 4, title: 'MySQL Documentation', url: 'https://dev.mysql.com/doc/', displayOrder: 4 },
+  { id: 5, title: 'MDN Web Docs', url: 'https://developer.mozilla.org/', displayOrder: 5 },
 ];
 
 // ─── SUBMISSIONS ─────────────────────────────────────────────────────────────
