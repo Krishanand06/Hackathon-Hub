@@ -1,6 +1,7 @@
 package edu.bits.hackathonhub.controller;
 
 import edu.bits.hackathonhub.model.MentorSlot;
+import edu.bits.hackathonhub.model.MentorDTO;
 import edu.bits.hackathonhub.service.MentorService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -15,6 +16,11 @@ public class MentorController {
 
     private final MentorService service;
 
+    @GetMapping
+    public ResponseEntity<List<MentorDTO>> getAllMentors() {
+        return ResponseEntity.ok(service.getAllMentors());
+    }
+
     @GetMapping("/{mentorId}/slots")
     public ResponseEntity<List<MentorSlot>> getAvailableSlots(@PathVariable Long mentorId) {
         return ResponseEntity.ok(service.getAvailableSlots(mentorId));
@@ -28,5 +34,11 @@ public class MentorController {
     @GetMapping("/my-bookings")
     public ResponseEntity<List<MentorSlot>> getMyBookings(@RequestParam Long userId) {
         return ResponseEntity.ok(service.getBookingsByUser(userId));
+    }
+
+    @PostMapping("/cancel/{slotId}")
+    public ResponseEntity<Void> cancelBooking(@PathVariable Long slotId, @RequestParam Long userId) {
+        service.cancelBooking(slotId, userId);
+        return ResponseEntity.ok().build();
     }
 }

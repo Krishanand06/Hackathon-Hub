@@ -10,6 +10,23 @@ const ROLES = [
   { value: 'JUDGE', label: 'Judge — Evaluate submissions' },
 ];
 
+const Field = ({
+  label, type = 'text', placeholder, required = true, value, onChange
+}: { label: string; type?: string; placeholder?: string; required?: boolean; value: string; onChange: (e: React.ChangeEvent<HTMLInputElement>) => void }) => (
+  <div>
+    <label className="gh-label">
+      {label}{required && <span style={{ color: 'var(--color-danger)', marginLeft: '2px' }}>*</span>}
+    </label>
+    <input
+      className="gh-input"
+      type={type}
+      placeholder={placeholder}
+      value={value}
+      onChange={onChange}
+    />
+  </div>
+);
+
 export default function Register() {
   const { register } = useAuth();
   const { theme, toggleTheme } = useTheme();
@@ -56,22 +73,7 @@ export default function Register() {
     }
   };
 
-  const Field = ({
-    label, field, type = 'text', placeholder, required = true,
-  }: { label: string; field: string; type?: string; placeholder?: string; required?: boolean }) => (
-    <div>
-      <label className="gh-label">
-        {label}{required && <span style={{ color: 'var(--color-danger)', marginLeft: '2px' }}>*</span>}
-      </label>
-      <input
-        className="gh-input"
-        type={type}
-        placeholder={placeholder}
-        value={(form as Record<string, string>)[field]}
-        onChange={set(field)}
-      />
-    </div>
-  );
+
 
   return (
     <div style={{
@@ -113,9 +115,9 @@ export default function Register() {
         )}
 
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
-          <Field label="Full Name" field="fullName" placeholder="Arjun Kumar" />
-          <Field label="Username" field="username" placeholder="arjun_k" />
-          <Field label="Email address" field="email" type="email" placeholder="you@bits-pilani.ac.in" />
+          <Field label="Full Name" value={form.fullName} onChange={set('fullName')} placeholder="Arjun Kumar" />
+          <Field label="Username" value={form.username} onChange={set('username')} placeholder="arjun_k" />
+          <Field label="Email address" type="email" value={form.email} onChange={set('email')} placeholder="you@bits-pilani.ac.in" />
 
           <div>
             <label className="gh-label">Role <span style={{ color: 'var(--color-danger)' }}>*</span></label>
@@ -130,8 +132,8 @@ export default function Register() {
             </select>
           </div>
 
-          <Field label="Password" field="password" type="password" placeholder="Min. 8 characters" />
-          <Field label="Confirm Password" field="confirmPassword" type="password" placeholder="Repeat password" />
+          <Field label="Password" type="password" value={form.password} onChange={set('password')} placeholder="Min. 8 characters" />
+          <Field label="Confirm Password" type="password" value={form.confirmPassword} onChange={set('confirmPassword')} placeholder="Repeat password" />
 
           <button
             type="submit"

@@ -13,12 +13,25 @@ export default function Mentors() {
   const [selectedMentor, setSelectedMentor] = useState<Mentor | null>(null);
   const [selectedSlot, setSelectedSlot] = useState<MentorSlot | null>(null);
   const [booked, setBooked] = useState<number[]>([]);
+  const [myBookings, setMyBookings] = useState<MentorSlot[]>([]);
+
+  const fetchBookings = React.useCallback(() => {
+    if (user?.id) {
+      api.get<MentorSlot[]>(`/mentors/my-bookings?userId=${user.id}`)
+        .then(res => {
+          setMyBookings(res.data);
+          setBooked(res.data.map(s => s.id));
+        })
+        .catch(() => {});
+    }
+  }, [user]);
 
   React.useEffect(() => {
     api.get<Mentor[]>('/mentors')
       .then(response => setMentors(Array.isArray(response.data) ? response.data : []))
       .catch(() => setMentors([]));
-  }, []);
+    fetchBookings();
+  }, [fetchBookings]);
 
   const filtered = mentors.filter(m =>
     !search || m.fullName.toLowerCase().includes(search.toLowerCase()) ||
@@ -32,16 +45,51 @@ export default function Mentors() {
   };
 
   const confirmBooking = () => {
-    if (selectedSlot) {
-      api.post('/mentor-bookings', {
-        slotId: selectedSlot.id,
-        userId: user?.id ?? 2,
-        teamId: selectedSlot.bookedByTeamId ?? null,
-      }).catch(() => undefined);
-      setBooked(b => [...b, selectedSlot.id]);
+    if (selectedSlot && selectedMentor) {
+      api.post(`/mentors/book/${selectedSlot.id}?userId=${user?.id ?? 2}`)
+        .then(() => {
+          // Update mentors state
+          setMentors(prev => prev.map(m => {
+            if (m.id === selectedMentor.id) {
+              return {
+                ...m,
+                availableSlots: m.availableSlots.map(s => 
+                  s.id === selectedSlot.id ? { ...s, booked: true } : s
+                )
+              };
+            }
+            return m;
+          }));
+          fetchBookings();
+          setBooked(b => [...b, selectedSlot.id]);
+          window.alert("Session booked successfully!");
+        })
+        .catch(() => {
+          window.alert("This slot is not available or already booked.");
+        });
     }
     setSelectedMentor(null);
     setSelectedSlot(null);
+  };
+
+  const cancelBooking = (slotId: number, mentorId: number) => {
+    api.post(`/mentors/cancel/${slotId}?userId=${user?.id ?? 2}`)
+      .then(() => {
+        setMentors(prev => prev.map(m => {
+          if (m.id === mentorId) {
+            return {
+              ...m,
+              availableSlots: m.availableSlots.map(s => 
+                s.id === slotId ? { ...s, booked: false } : s
+              )
+            };
+          }
+          return m;
+        }));
+        fetchBookings();
+        window.alert("Session cancelled successfully.");
+      })
+      .catch(() => undefined);
   };
 
   const formatSlot = (slot: MentorSlot) => {
@@ -68,6 +116,38 @@ export default function Mentors() {
         ))}
       </div>
 
+      {/* My Bookings Section */}
+      {myBookings.length > 0 && (
+        <div style={{ marginTop: '40px' }}>
+          <h2 style={{ fontSize: '20px', fontWeight: 600, marginBottom: '16px' }}>My Bookings</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '16px' }}>
+            {myBookings.map(slot => {
+              // Find the mentor for this slot
+              const mentor = mentors.find(m => m.id === slot.mentorId);
+              return (
+                <div key={slot.id} className="gh-card" style={{ padding: '16px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: '14px', marginBottom: '4px' }}>
+                      Session with {mentor?.fullName || 'Mentor'}
+                    </div>
+                    <div style={{ fontSize: '12px', color: 'var(--color-text-muted)' }}>
+                      📅 {formatSlot(slot)}
+                    </div>
+                  </div>
+                  <button 
+                    onClick={() => cancelBooking(slot.id, slot.mentorId)}
+                    className="gh-btn gh-btn-secondary" 
+                    style={{ fontSize: '12px', padding: '4px 10px', color: 'var(--color-danger)' }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
       {/* Booking modal */}
       <Modal
         isOpen={!!selectedMentor}
@@ -86,7 +166,7 @@ export default function Mentors() {
           Select an available 30-minute slot:
         </p>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {selectedMentor?.availableSlots.filter(s => !s.isBooked && !booked.includes(s.id)).map(slot => (
+          {selectedMentor?.availableSlots.filter(s => !s.booked && !booked.includes(s.id)).map(slot => (
             <button
               key={slot.id}
               onClick={() => setSelectedSlot(slot)}
@@ -101,7 +181,7 @@ export default function Mentors() {
               📅 {formatSlot(slot)}
             </button>
           ))}
-          {selectedMentor?.availableSlots.filter(s => !s.isBooked && !booked.includes(s.id)).length === 0 && (
+          {selectedMentor?.availableSlots.filter(s => !s.booked && !booked.includes(s.id)).length === 0 && (
             <p style={{ color: 'var(--color-text-muted)', fontSize: 13 }}>No available slots.</p>
           )}
         </div>

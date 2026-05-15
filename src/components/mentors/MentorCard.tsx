@@ -9,7 +9,7 @@ interface MentorCardProps {
 }
 
 export default function MentorCard({ mentor, onBook }: MentorCardProps) {
-  const availableCount = mentor.availableSlots.filter(s => !s.isBooked).length;
+  const availableCount = mentor.availableSlots.filter(s => !s.booked).length;
 
   return (
     <div className="gh-card" style={{ padding: '16px', transition: 'border-color 0.15s' }}
@@ -58,7 +58,7 @@ export default function MentorCard({ mentor, onBook }: MentorCardProps) {
           <Calendar size={12} />
           {availableCount > 0
             ? <span style={{ color: 'var(--color-success)' }}>{availableCount} slots available</span>
-            : <span style={{ color: 'var(--color-danger)' }}>No slots available</span>
+            : <span style={{ color: 'var(--color-text-muted)' }}>Unavailable</span>
           }
         </span>
         {onBook && availableCount > 0 && (

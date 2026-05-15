@@ -138,7 +138,8 @@ export interface MentorSlot {
   id: number;
   startTime: string;
   endTime: string;
-  isBooked: boolean;
+  status: 'AVAILABLE' | 'BOOKED' | 'CANCELLED';
+  booked: boolean;
   bookedByTeamId?: number;
 }
 

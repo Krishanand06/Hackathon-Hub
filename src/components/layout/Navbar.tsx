@@ -120,16 +120,6 @@ export default function Navbar() {
 
             {isAuthenticated ? (
               <>
-                {/* Notifications */}
-                <button style={{
-                  display: 'flex', alignItems: 'center', justifyContent: 'center',
-                  width: '32px', height: '32px', borderRadius: '6px', border: 'none',
-                  backgroundColor: 'transparent', cursor: 'pointer',
-                  color: 'var(--color-text-secondary)',
-                }}>
-                  <Bell size={16} />
-                </button>
-
                 {/* User dropdown */}
                 <div className="dropdown" ref={dropdownRef}>
                   <button

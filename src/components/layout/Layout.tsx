@@ -17,11 +17,6 @@ export default function Layout() {
       }}>
         <div className="page-container" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '8px' }}>
           <span>© 2025 BITS Hackathon Hub. All rights reserved.</span>
-          <div style={{ display: 'flex', gap: '16px' }}>
-            <a href="#" style={{ color: 'var(--color-text-muted)' }}>Terms</a>
-            <a href="#" style={{ color: 'var(--color-text-muted)' }}>Privacy</a>
-            <a href="#" style={{ color: 'var(--color-text-muted)' }}>Contact</a>
-          </div>
         </div>
       </footer>
     </div>

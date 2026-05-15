@@ -34,6 +34,9 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**").permitAll()
                         .requestMatchers("/api/hackathons/public/**").permitAll()
+                        .requestMatchers("/api/resources/**").permitAll()
+                        .requestMatchers("/api/mentors/**").permitAll()
+                        .requestMatchers("/api/leaderboard/**").permitAll()
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session
