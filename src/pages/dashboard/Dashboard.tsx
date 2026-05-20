@@ -53,7 +53,7 @@ export default function Dashboard() {
   const mySubmissions = mockSubmissions.filter(s => MY_SUBMISSION_IDS.includes(s.id));
   const mySessions = mockMentors.flatMap(mentor =>
     mentor.availableSlots
-      .filter(slot => slot.isBooked && MY_TEAM_IDS.includes(slot.bookedByTeamId || 0))
+      .filter(slot => slot.booked && MY_TEAM_IDS.includes(slot.bookedByTeamId || 0))
       .map(slot => ({
         ...slot,
         mentorName: mentor.fullName,
@@ -507,40 +507,50 @@ function JudgeDashboard() {
 
 function MentorDashboard() {
   const { user } = useAuth();
-  const [mentors, setMentors] = useState<Mentor[]>(mockMentors);
+  const [mentors, setMentors] = useState<Mentor[]>([]);
+  const [loadingMentors, setLoadingMentors] = useState(true);
   const mentor = mentors.find(m => m.userId === user?.id) ?? mockMentors[0];
   type MentorDashboardSlot = {
     id: number;
     startTime: string;
     endTime: string;
-    isBooked: boolean;
+    booked: boolean;
     bookedByTeamId?: number;
   };
   const baseSlots: MentorDashboardSlot[] = mentor.availableSlots;
   const [slotStatus, setSlotStatus] = useState<Record<number, boolean>>(
-    Object.fromEntries(baseSlots.map(slot => [slot.id, !slot.isBooked]))
+    Object.fromEntries(baseSlots.map(slot => [slot.id, !slot.booked]))
   );
   const [customSlots, setCustomSlots] = useState<MentorDashboardSlot[]>([]);
   const [newSlot, setNewSlot] = useState({ date: '', startTime: '', endTime: '' });
 
-  React.useEffect(() => {
+  const fetchMentors = React.useCallback(() => {
+    if (!user?.id) return;
+    setLoadingMentors(true);
     api.get<Mentor[]>('/mentors')
-      .then(response => setMentors(response.data))
-      .catch(() => setMentors(mockMentors));
-  }, []);
+      .then(response => setMentors(Array.isArray(response.data) ? response.data : []))
+      .catch(() => setMentors(mockMentors))
+      .finally(() => setLoadingMentors(false));
+  }, [user?.id]);
+
+  React.useEffect(() => {
+    fetchMentors();
+    const interval = window.setInterval(fetchMentors, 15000);
+    return () => window.clearInterval(interval);
+  }, [fetchMentors]);
 
   const allSlots = [...baseSlots, ...customSlots].sort(
     (a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime()
   );
 
   const bookings = allSlots
-    .filter(slot => slot.isBooked)
+    .filter(slot => slot.booked)
     .map(slot => {
       const team = mockTeams.find(t => t.id === slot.bookedByTeamId);
       return { ...slot, teamName: team?.name ?? 'Assigned team', hackathonTitle: team?.hackathonTitle ?? 'Hackathon' };
     });
 
-  const availableSlots = allSlots.filter(slot => !slot.isBooked);
+  const availableSlots = allSlots.filter(slot => !slot.booked);
 
   const addSlot = (event: React.FormEvent) => {
     event.preventDefault();
@@ -551,7 +561,7 @@ function MentorDashboard() {
       id,
       startTime: `${newSlot.date}T${newSlot.startTime}`,
       endTime: `${newSlot.date}T${newSlot.endTime}`,
-      isBooked: false,
+      booked: false,
     };
 
     api.post('/mentor-slots', {
@@ -618,7 +628,12 @@ function MentorDashboard() {
               </p>
               <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{bookings.length} booked session{bookings.length === 1 ? '' : 's'}</h2>
             </div>
-            <span className="gh-badge gh-badge-green">{mentor.rating.toFixed(1)} rating</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+              <button onClick={fetchMentors} className="gh-btn gh-btn-secondary" style={{ fontSize: 12, padding: '6px 10px' }}>
+                Refresh
+              </button>
+              <span className="gh-badge gh-badge-green">{mentor.rating.toFixed(1)} rating</span>
+            </div>
           </div>
 
           {bookings.length === 0 ? (

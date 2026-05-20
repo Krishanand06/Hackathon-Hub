@@ -9,7 +9,7 @@ interface MentorCardProps {
 }
 
 export default function MentorCard({ mentor, onBook }: MentorCardProps) {
-  const availableCount = mentor.availableSlots.filter(s => !s.booked).length;
+  const availableCount = mentor.availableSlots.filter(s => s.status === 'AVAILABLE' && !s.booked).length;
 
   return (
     <div className="gh-card" style={{ padding: '16px', transition: 'border-color 0.15s' }}

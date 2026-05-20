@@ -21,6 +21,15 @@ public class MentorController {
         return ResponseEntity.ok(service.getAllMentors());
     }
 
+    @GetMapping("/current")
+    public ResponseEntity<MentorDTO> getCurrentMentor(@RequestParam Long userId) {
+        MentorDTO mentor = service.getMentorByUserId(userId);
+        if (mentor == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(mentor);
+    }
+
     @GetMapping("/{mentorId}/slots")
     public ResponseEntity<List<MentorSlot>> getAvailableSlots(@PathVariable Long mentorId) {
         return ResponseEntity.ok(service.getAvailableSlots(mentorId));

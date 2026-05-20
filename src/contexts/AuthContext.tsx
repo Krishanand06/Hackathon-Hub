@@ -117,7 +117,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     persistSession('demo-student-token', {
       ...demoUsers.STUDENT,
-      id: Date.now(),
+      // Use the valid demo student ID instead of Date.now() to prevent foreign key errors in backend
+      id: 2,
       username: email.split('@')[0] || 'demo_user',
       email,
       fullName: 'BITS Student',
@@ -130,7 +131,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const register = async (data: RegisterData) => {
     persistSession('demo-token', {
-      id: Date.now(),
+      id: 2, // Use a valid database ID for demo testing
       username: data.username,
       email: data.email,
       fullName: data.fullName,

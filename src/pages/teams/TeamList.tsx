@@ -4,19 +4,59 @@ import TeamCard from '../../components/teams/TeamCard';
 import { Search, Users, Cpu } from 'lucide-react';
 import { SkillSelector } from '../../components/ui/SkillBadge';
 import api from '../../api/client';
-import { Team } from '../../types';
+import { Team, Hackathon } from '../../types';
+import { useAuth } from '../../contexts/AuthContext';
+import Modal from '../../components/ui/Modal';
 
 export default function TeamList() {
   const [teams, setTeams] = useState<Team[]>(mockTeams);
   const [search, setSearch] = useState('');
   const [skills, setSkills] = useState<string[]>([]);
   const [openOnly, setOpenOnly] = useState(false);
+  const { user } = useAuth();
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [hackathons, setHackathons] = useState<Hackathon[]>([]);
+  const [newTeam, setNewTeam] = useState({
+    name: '',
+    description: '',
+    hackathonId: '',
+    maxSize: 4,
+    isOpen: true,
+  });
 
   React.useEffect(() => {
-    api.get<Team[]>('/teams')
-      .then(response => setTeams(response.data))
-      .catch(() => setTeams(mockTeams));
+    api.get<Hackathon[]>('/hackathons').then(res => setHackathons(Array.isArray(res.data) ? res.data : []));
   }, []);
+
+  const fetchTeams = () => {
+    api.get<Team[]>('/teams')
+      .then(response => setTeams(Array.isArray(response.data) ? response.data : []))
+      .catch(() => setTeams(mockTeams));
+  };
+
+  React.useEffect(() => {
+    fetchTeams();
+  }, []);
+
+  const handleCreateTeam = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTeam.name || !newTeam.hackathonId) return;
+
+    api.post(`/teams/create?leaderId=${user?.id || 1}`, {
+      name: newTeam.name,
+      description: newTeam.description,
+      hackathon: { id: Number(newTeam.hackathonId) },
+      maxSize: newTeam.maxSize,
+      isOpen: newTeam.isOpen,
+    }).then(() => {
+      setIsCreateModalOpen(false);
+      setNewTeam({ name: '', description: '', hackathonId: '', maxSize: 4, isOpen: true });
+      fetchTeams();
+      window.alert("Team created successfully!");
+    }).catch((err) => {
+      window.alert(err.response?.data?.message || "Failed to create team. You can only create one team.");
+    });
+  };
 
   const filtered = teams.filter(t => {
     const matchSearch = !search || t.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -29,10 +69,15 @@ export default function TeamList() {
   return (
     <div className="page-container">
       <div style={{ marginBottom: '24px' }}>
-        <h1 style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 600 }}>Teams</h1>
-        <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '14px' }}>
-          Find a team or discover teammates with skill-based matchmaking
-        </p>
+        <div>
+          <h1 style={{ margin: '0 0 4px', fontSize: '24px', fontWeight: 600 }}>Teams</h1>
+          <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: '14px' }}>
+            Find a team or discover teammates with skill-based matchmaking
+          </p>
+        </div>
+        <button onClick={() => setIsCreateModalOpen(true)} className="gh-btn gh-btn-primary">
+          Create Team
+        </button>
       </div>
 
       {/* Filters */}
@@ -81,6 +126,51 @@ export default function TeamList() {
           {filtered.map(t => <TeamCard key={t.id} team={t} />)}
         </div>
       )}
+
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Create a New Team"
+        footer={
+          <>
+            <button onClick={() => setIsCreateModalOpen(false)} className="gh-btn gh-btn-secondary">Cancel</button>
+            <button onClick={handleCreateTeam} className="gh-btn gh-btn-primary" disabled={!newTeam.name || !newTeam.hackathonId}>
+              Create Team
+            </button>
+          </>
+        }
+      >
+        <form onSubmit={handleCreateTeam} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label className="gh-label">Team Name</label>
+            <input className="gh-input" value={newTeam.name} onChange={e => setNewTeam({...newTeam, name: e.target.value})} placeholder="HackSquad" required />
+          </div>
+          <div>
+            <label className="gh-label">Hackathon</label>
+            <select className="gh-input" value={newTeam.hackathonId} onChange={e => setNewTeam({...newTeam, hackathonId: e.target.value})} required>
+              <option value="">Select a Hackathon</option>
+              {hackathons.map(h => <option key={h.id} value={h.id}>{h.title}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="gh-label">Description</label>
+            <textarea className="gh-input" value={newTeam.description} onChange={e => setNewTeam({...newTeam, description: e.target.value})} placeholder="What are you building?" rows={3} />
+          </div>
+          <div style={{ display: 'flex', gap: 16 }}>
+            <div style={{ flex: 1 }}>
+              <label className="gh-label">Max Members</label>
+              <input type="number" className="gh-input" value={newTeam.maxSize} onChange={e => setNewTeam({...newTeam, maxSize: Number(e.target.value)})} min={1} max={10} />
+            </div>
+            <div style={{ flex: 1 }}>
+              <label className="gh-label">Visibility</label>
+              <select className="gh-input" value={newTeam.isOpen ? 'true' : 'false'} onChange={e => setNewTeam({...newTeam, isOpen: e.target.value === 'true'})}>
+                <option value="true">Public (Anyone can join)</option>
+                <option value="false">Private (Request to join)</option>
+              </select>
+            </div>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

@@ -4,18 +4,66 @@ import { ArrowLeft, Users, Lock, Unlock, Crown } from 'lucide-react';
 import { mockTeams } from '../../data/mockData';
 import { SkillBadge } from '../../components/ui/SkillBadge';
 import api from '../../api/client';
+import { useAuth } from '../../contexts/AuthContext';
 import { Team } from '../../types';
 
 export default function TeamDetail() {
   const { id } = useParams();
+  const { user } = useAuth();
   const [team, setTeam] = React.useState<Team | undefined>(() => mockTeams.find(t => t.id === Number(id)));
 
-  React.useEffect(() => {
+  const fetchTeam = React.useCallback(() => {
     if (!id) return;
     api.get<Team>(`/teams/${id}`)
       .then(response => setTeam(response.data))
       .catch(() => setTeam(mockTeams.find(t => t.id === Number(id))));
   }, [id]);
+
+  React.useEffect(() => {
+    fetchTeam();
+  }, [fetchTeam]);
+
+  const handleJoin = () => {
+    if (!user) return alert("Please log in to join.");
+    api.post(`/teams/${id}/join?userId=${user.id}`)
+      .then(() => {
+        alert(team?.isOpen ? "Joined team successfully!" : "Request sent successfully!");
+        fetchTeam();
+      })
+      .catch(err => alert(err.response?.data?.message || "Failed to join team."));
+  };
+
+  const handleLeave = () => {
+    if (!user) return;
+    api.post(`/teams/${id}/leave?userId=${user.id}`)
+      .then(() => {
+        alert("Left team successfully.");
+        fetchTeam();
+      })
+      .catch(err => alert(err.response?.data?.message || "Failed to leave team."));
+  };
+
+  const handleDelete = () => {
+    if (!window.confirm("Are you sure you want to delete this team?")) return;
+    api.delete(`/teams/${id}`)
+      .then(() => {
+        alert("Team deleted.");
+        window.location.href = '/teams';
+      })
+      .catch(() => alert("Failed to delete."));
+  };
+
+  const handleApprove = (userId: number) => {
+    api.post(`/teams/${id}/approve?userId=${userId}&leaderId=${user?.id}`)
+      .then(() => fetchTeam())
+      .catch(() => alert("Failed to approve."));
+  };
+
+  const handleReject = (userId: number) => {
+    api.post(`/teams/${id}/reject?userId=${userId}&leaderId=${user?.id}`)
+      .then(() => fetchTeam())
+      .catch(() => alert("Failed to reject."));
+  };
 
   if (!team) return (
     <div className="page-container" style={{ paddingTop: 40 }}>
@@ -38,10 +86,17 @@ export default function TeamDetail() {
             <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--color-text-muted)' }}>📍 {team.hackathonTitle}</p>
             <p style={{ margin: 0, color: 'var(--color-text-secondary)', fontSize: 14, lineHeight: 1.6 }}>{team.description}</p>
           </div>
-          <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: team.isOpen ? 'var(--color-success)' : 'var(--color-danger)' }}>
-            {team.isOpen ? <Unlock size={14} /> : <Lock size={14} />}
-            {team.isOpen ? 'Open to join' : 'Closed'}
-          </span>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 8 }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: team.isOpen ? 'var(--color-success)' : 'var(--color-warning)' }}>
+              {team.isOpen ? <Unlock size={14} /> : <Lock size={14} />}
+              {team.isOpen ? 'Open to join' : 'Private (Request to join)'}
+            </span>
+            {user?.id === team.leaderId && (
+              <button onClick={handleDelete} className="gh-btn gh-btn-danger" style={{ fontSize: 12, padding: '4px 8px' }}>
+                Delete Team
+              </button>
+            )}
+          </div>
         </div>
 
         {team.requiredSkills.length > 0 && (
@@ -82,10 +137,41 @@ export default function TeamDetail() {
             </div>
           ))}
         </div>
-        {team.isOpen && team.members.length < team.maxSize && (
-          <button className="gh-btn gh-btn-primary" style={{ marginTop: 16, width: '100%', justifyContent: 'center' }}>
-            Request to Join Team
-          </button>
+
+        {team.pendingRequests && team.pendingRequests.length > 0 && user?.id === team.leaderId && (
+          <div style={{ marginTop: 24 }}>
+            <h3 style={{ fontSize: 14, fontWeight: 600, marginBottom: 12 }}>Pending Requests</h3>
+            {team.pendingRequests.map(req => (
+              <div key={req.userId} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px', border: '1px solid var(--color-border)', borderRadius: 6, marginBottom: 8 }}>
+                <span style={{ fontSize: 14 }}>{req.fullName} ({req.username})</span>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button onClick={() => handleApprove(req.userId)} className="gh-btn gh-btn-primary" style={{ fontSize: 12, padding: '4px 8px' }}>Accept</button>
+                  <button onClick={() => handleReject(req.userId)} className="gh-btn gh-btn-secondary" style={{ fontSize: 12, padding: '4px 8px' }}>Reject</button>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
+        {user && team.members.some(m => m.userId === user.id) ? (
+          user.id !== team.leaderId && (
+            <button onClick={handleLeave} className="gh-btn gh-btn-secondary" style={{ marginTop: 16, width: '100%', justifyContent: 'center', color: 'var(--color-danger)', borderColor: 'var(--color-danger)' }}>
+              Leave Team
+            </button>
+          )
+        ) : (
+          team.members.length < team.maxSize && (
+            <button 
+              onClick={handleJoin} 
+              className="gh-btn gh-btn-primary" 
+              style={{ marginTop: 16, width: '100%', justifyContent: 'center' }}
+              disabled={team.pendingRequests?.some(req => req.userId === user?.id)}
+            >
+              {team.pendingRequests?.some(req => req.userId === user?.id) 
+                ? 'Request Pending...' 
+                : (team.isOpen ? 'Join Team' : 'Request to Join Team')}
+            </button>
+          )
         )}
       </div>
     </div>

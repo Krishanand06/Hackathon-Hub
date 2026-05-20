@@ -14,6 +14,7 @@ public class TeamDTO {
     private Long hackathonId;
     private String hackathonTitle;
     private List<TeamMemberDTO> members;
+    private List<TeamMemberDTO> pendingRequests;
     private Integer maxSize;
     private List<String> requiredSkills;
     private boolean isOpen;

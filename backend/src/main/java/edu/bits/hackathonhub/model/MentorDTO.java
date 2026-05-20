@@ -9,6 +9,7 @@ import java.util.List;
 @Builder
 public class MentorDTO {
     private Long id;
+    private Long userId;
     private String fullName;
     private List<String> expertise;
     private String company;

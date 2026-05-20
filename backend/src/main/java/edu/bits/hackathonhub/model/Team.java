@@ -40,6 +40,14 @@ public class Team {
     )
     private Set<User> members;
 
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "team_requests",
+        joinColumns = @JoinColumn(name = "team_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    private Set<User> pendingRequests;
+
     @Column(name = "max_size")
     private Integer maxSize;
     @Column(name = "is_open")

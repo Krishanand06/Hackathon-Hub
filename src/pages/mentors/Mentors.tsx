@@ -19,10 +19,14 @@ export default function Mentors() {
     if (user?.id) {
       api.get<MentorSlot[]>(`/mentors/my-bookings?userId=${user.id}`)
         .then(res => {
-          setMyBookings(res.data);
-          setBooked(res.data.map(s => s.id));
+          if (Array.isArray(res.data)) {
+            setMyBookings(res.data);
+            setBooked(res.data.map(s => s.id));
+          } else {
+            setMyBookings([]);
+          }
         })
-        .catch(() => {});
+        .catch(() => setMyBookings([]));
     }
   }, [user]);
 
@@ -72,20 +76,15 @@ export default function Mentors() {
     setSelectedSlot(null);
   };
 
-  const cancelBooking = (slotId: number, mentorId: number) => {
+  const cancelBooking = (slotId: number, mentorId?: number) => {
     api.post(`/mentors/cancel/${slotId}?userId=${user?.id ?? 2}`)
       .then(() => {
-        setMentors(prev => prev.map(m => {
-          if (m.id === mentorId) {
-            return {
-              ...m,
-              availableSlots: m.availableSlots.map(s => 
-                s.id === slotId ? { ...s, booked: false } : s
-              )
-            };
-          }
-          return m;
-        }));
+        setMentors(prev => prev.map(m => ({
+          ...m,
+          availableSlots: m.availableSlots.map(s => 
+            s.id === slotId ? { ...s, booked: false } : s
+          )
+        })));
         fetchBookings();
         window.alert("Session cancelled successfully.");
       })
@@ -135,7 +134,7 @@ export default function Mentors() {
                     </div>
                   </div>
                   <button 
-                    onClick={() => cancelBooking(slot.id, slot.mentorId)}
+                    onClick={() => cancelBooking(slot.id)}
                     className="gh-btn gh-btn-secondary" 
                     style={{ fontSize: '12px', padding: '4px 10px', color: 'var(--color-danger)' }}
                   >

@@ -65,6 +65,7 @@ export interface Team {
   isOpen: boolean;
   leaderId: number;
   leaderName: string;
+  pendingRequests?: TeamMember[];
 }
 
 // ============ SUBMISSION TYPES ============
@@ -141,6 +142,7 @@ export interface MentorSlot {
   status: 'AVAILABLE' | 'BOOKED' | 'CANCELLED';
   booked: boolean;
   bookedByTeamId?: number;
+  mentorId?: number;
 }
 
 export interface MentorBooking {

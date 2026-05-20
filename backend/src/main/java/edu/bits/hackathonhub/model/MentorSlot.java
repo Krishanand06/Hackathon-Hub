@@ -21,6 +21,9 @@ public class MentorSlot {
     @Column(name = "mentor_id", nullable = false)
     private Long mentorId;
 
+    @Column(name = "booked_by_team_id")
+    private Long bookedByTeamId;
+
     @Column(name = "start_time", nullable = false)
     private LocalDateTime startTime;
 

@@ -4,6 +4,7 @@ import { Trophy, Users, Code2, ArrowRight, Zap, Globe, Calendar } from 'lucide-r
 import { mockHackathons } from '../data/mockData';
 import HackathonCard from '../components/hackathons/HackathonCard';
 import api from '../api/client';
+import { useAuth } from '../contexts/AuthContext';
 import { Hackathon } from '../types';
 
 const stats = [
@@ -41,6 +42,7 @@ const features = [
 ];
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
   const [hackathons, setHackathons] = React.useState<Hackathon[]>(mockHackathons);
 
   React.useEffect(() => {
@@ -120,9 +122,11 @@ export default function Home() {
             <Link to="/hackathons" className="gh-btn gh-btn-primary" style={{ padding: '10px 20px', fontSize: '15px', gap: '8px' }}>
               Browse Hackathons <ArrowRight size={16} />
             </Link>
-            <Link to="/register" className="gh-btn gh-btn-secondary" style={{ padding: '10px 20px', fontSize: '15px' }}>
-              Get Started Free
-            </Link>
+            {!isAuthenticated && (
+              <Link to="/register" className="gh-btn gh-btn-secondary" style={{ padding: '10px 20px', fontSize: '15px' }}>
+                Get Started Free
+              </Link>
+            )}
           </div>
         </div>
       </div>

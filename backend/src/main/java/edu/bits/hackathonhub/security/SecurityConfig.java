@@ -36,6 +36,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/hackathons/public/**").permitAll()
                         .requestMatchers("/api/resources/**").permitAll()
                         .requestMatchers("/api/mentors/**").permitAll()
+                        .requestMatchers("/api/mentor-slots/**").permitAll()
                         .requestMatchers("/api/leaderboard/**").permitAll()
                         .anyRequest().authenticated()
                 )
@@ -52,7 +53,7 @@ public class SecurityConfig {
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
         configuration.setAllowedOriginPatterns(List.of("*"));
-        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
+        configuration.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(List.of("Authorization", "Content-Type"));
         configuration.setAllowCredentials(true);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();

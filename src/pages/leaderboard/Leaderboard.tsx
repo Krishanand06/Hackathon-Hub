@@ -19,7 +19,7 @@ export default function Leaderboard() {
 
   React.useEffect(() => {
     api.get<Hackathon[]>('/hackathons')
-      .then(response => setHackathons(response.data))
+      .then(response => setHackathons(Array.isArray(response.data) ? response.data : []))
       .catch(() => setHackathons([]));
   }, []);
 

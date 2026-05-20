@@ -51,6 +51,16 @@ public class TeamController {
         return ResponseEntity.ok(service.joinTeam(id, userId));
     }
 
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<Team> approveRequest(@PathVariable Long id, @RequestParam Long userId, @RequestParam Long leaderId) {
+        return ResponseEntity.ok(service.approveRequest(id, userId, leaderId));
+    }
+
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<Team> rejectRequest(@PathVariable Long id, @RequestParam Long userId, @RequestParam Long leaderId) {
+        return ResponseEntity.ok(service.rejectRequest(id, userId, leaderId));
+    }
+
     @PostMapping("/{id}/leave")
     public ResponseEntity<Void> leaveTeam(@PathVariable Long id, @RequestParam Long userId) {
         service.leaveTeam(id, userId);
@@ -85,6 +95,17 @@ public class TeamController {
                                 .role(m.getRole() != null ? m.getRole().name() : "MEMBER")
                                 .skills(java.util.List.of())
                                 .isLeader(team.getLeader() != null && team.getLeader().getId().equals(m.getId()))
+                                .build())
+                        .collect(java.util.stream.Collectors.toList()) : java.util.List.of())
+                .pendingRequests(team.getPendingRequests() != null ? team.getPendingRequests().stream()
+                        .map(m -> TeamMemberDTO.builder()
+                                .id(m.getId())
+                                .userId(m.getId())
+                                .username(m.getUsername())
+                                .fullName(m.getFullName())
+                                .role(m.getRole() != null ? m.getRole().name() : "MEMBER")
+                                .skills(java.util.List.of())
+                                .isLeader(false)
                                 .build())
                         .collect(java.util.stream.Collectors.toList()) : java.util.List.of())
                 .build();

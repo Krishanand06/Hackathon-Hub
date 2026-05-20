@@ -1,5 +1,6 @@
 package edu.bits.hackathonhub.service;
 
+import edu.bits.hackathonhub.model.Role;
 import edu.bits.hackathonhub.model.Team;
 import edu.bits.hackathonhub.model.User;
 import edu.bits.hackathonhub.repository.TeamRepository;
@@ -18,6 +19,20 @@ public class TeamService {
     private final TeamRepository teamRepository;
     private final UserRepository userRepository;
 
+    private User getOrCreateUser(Long userId) {
+        return userRepository.findById(userId).orElseGet(() -> {
+            User newUser = User.builder()
+                // Do not set id manually if it's auto-generated, but since frontend relies on it:
+                .username("demo_" + userId)
+                .email("demo" + userId + "@example.com")
+                .password("123456")
+                .fullName("Demo User " + userId)
+                .role(Role.STUDENT)
+                .build();
+            return userRepository.save(newUser);
+        });
+    }
+
     public List<Team> getAllTeams() {
         return teamRepository.findAll();
     }
@@ -35,10 +50,18 @@ public class TeamService {
     }
 
     public Team createTeam(Team team, Long leaderId) {
-        User leader = userRepository.findById(leaderId).orElseThrow();
+        User leader = getOrCreateUser(leaderId);
+        // Enforce 1 team per user
+        boolean leadsATeam = teamRepository.findAll().stream().anyMatch(t -> t.getLeader().getId().equals(leaderId));
+        if (leadsATeam) {
+            throw new RuntimeException("You can only create one team.");
+        }
         team.setLeader(leader);
         if (team.getMembers() == null) {
             team.setMembers(new HashSet<>());
+        }
+        if (team.getPendingRequests() == null) {
+            team.setPendingRequests(new HashSet<>());
         }
         team.getMembers().add(leader);
         return teamRepository.save(team);
@@ -46,19 +69,56 @@ public class TeamService {
 
     public Team joinTeam(Long teamId, Long userId) {
         Team team = teamRepository.findById(teamId).orElseThrow();
-        User user = userRepository.findById(userId).orElseThrow();
+        User user = getOrCreateUser(userId);
         
-        if (!team.isOpen() || team.getMembers().size() >= team.getMaxSize()) {
-            throw new RuntimeException("Team is closed or full");
+        if (team.getMembers().size() >= team.getMaxSize()) {
+            throw new RuntimeException("Team is full");
         }
         
+        if (!team.isOpen()) {
+            if (team.getPendingRequests() == null) team.setPendingRequests(new HashSet<>());
+            team.getPendingRequests().add(user);
+        } else {
+            team.getMembers().add(user);
+        }
+        return teamRepository.save(team);
+    }
+
+    public Team approveRequest(Long teamId, Long userId, Long leaderId) {
+        Team team = teamRepository.findById(teamId).orElseThrow();
+        User user = getOrCreateUser(userId);
+        
+        if (!team.getLeader().getId().equals(leaderId)) {
+            throw new RuntimeException("Only leader can approve");
+        }
+        if (team.getMembers().size() >= team.getMaxSize()) {
+            throw new RuntimeException("Team is full");
+        }
+        
+        if (team.getPendingRequests() != null) {
+            team.getPendingRequests().remove(user);
+        }
         team.getMembers().add(user);
+        return teamRepository.save(team);
+    }
+
+    public Team rejectRequest(Long teamId, Long userId, Long leaderId) {
+        Team team = teamRepository.findById(teamId).orElseThrow();
+        User user = getOrCreateUser(userId);
+        
+        if (!team.getLeader().getId().equals(leaderId)) {
+            throw new RuntimeException("Only leader can reject");
+        }
+        
+        if (team.getPendingRequests() != null) {
+            team.getPendingRequests().remove(user);
+        }
         return teamRepository.save(team);
     }
 
     public void leaveTeam(Long teamId, Long userId) {
         Team team = teamRepository.findById(teamId).orElseThrow();
-        User user = userRepository.findById(userId).orElseThrow();
+        User user = getOrCreateUser(userId);
         
         if (team.getLeader().getId().equals(userId)) {
             throw new RuntimeException("Leader cannot leave the team. Dissolve it instead.");
