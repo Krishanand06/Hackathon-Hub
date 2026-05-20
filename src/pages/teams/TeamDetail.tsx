@@ -127,7 +127,23 @@ export default function TeamDetail() {
               <div style={{ flex: 1 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontWeight: 600, fontSize: 14 }}>
                   {m.fullName}
-                  {m.isLeader && <Crown size={13} color="#d4a017" aria-label="Team Leader" />}
+                  {(m.isLeader || m.userId === team.leaderId) && (
+                    <span style={{ 
+                      display: 'inline-flex', 
+                      alignItems: 'center', 
+                      gap: 4, 
+                      fontSize: '11px', 
+                      fontWeight: 500, 
+                      backgroundColor: 'rgba(212, 160, 23, 0.15)', 
+                      color: '#d4a017', 
+                      padding: '2px 8px', 
+                      borderRadius: '4px',
+                      marginLeft: '6px'
+                    }}>
+                      <Crown size={12} color="#d4a017" />
+                      Leader
+                    </span>
+                  )}
                 </div>
                 <div style={{ fontSize: 12, color: 'var(--color-text-muted)' }}>{m.role}</div>
               </div>

@@ -51,10 +51,17 @@ public class TeamService {
 
     public Team createTeam(Team team, Long leaderId) {
         User leader = getOrCreateUser(leaderId);
-        // Enforce 1 team per user
-        boolean leadsATeam = teamRepository.findAll().stream().anyMatch(t -> t.getLeader().getId().equals(leaderId));
-        if (leadsATeam) {
-            throw new RuntimeException("You can only create one team.");
+        // Enforce 1 team per user per hackathon
+        if (team.getHackathon() == null || team.getHackathon().getId() == null) {
+            throw new RuntimeException("Hackathon is required to create a team.");
+        }
+        Long hackathonId = team.getHackathon().getId();
+        boolean leadsATeamInThisHackathon = teamRepository.findAll().stream()
+            .anyMatch(t -> t.getLeader().getId().equals(leaderId) 
+                    && t.getHackathon() != null 
+                    && t.getHackathon().getId().equals(hackathonId));
+        if (leadsATeamInThisHackathon) {
+            throw new RuntimeException("You can only create one team per hackathon.");
         }
         team.setLeader(leader);
         if (team.getMembers() == null) {

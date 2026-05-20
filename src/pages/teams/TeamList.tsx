@@ -59,7 +59,7 @@ export default function TeamList() {
       fetchTeams();
       window.alert("Team created successfully!");
     }).catch((err) => {
-      window.alert(err.response?.data?.message || "Failed to create team. You can only create one team.");
+      window.alert(err.response?.data?.message || "Failed to create team. You can only create one team per hackathon.");
     });
   };
 

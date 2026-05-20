@@ -2,6 +2,7 @@ package edu.bits.hackathonhub.model;
 
 import lombok.Builder;
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
@@ -14,5 +15,6 @@ public class TeamMemberDTO {
     private String fullName;
     private String role;
     private List<String> skills;
+    @JsonProperty("isLeader")
     private boolean isLeader;
 }
