@@ -46,7 +46,7 @@ export default function Home() {
   const [hackathons, setHackathons] = React.useState<Hackathon[]>(mockHackathons);
 
   React.useEffect(() => {
-    api.get<Hackathon[]>('/hackathons')
+    api.get<Hackathon[]>('/hackathons/public')
       .then(response => setHackathons(response.data))
       .catch(() => setHackathons(mockHackathons));
   }, []);

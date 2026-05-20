@@ -380,40 +380,10 @@ CREATE TRIGGER trg_team_members_ai_status
 AFTER INSERT ON team_members
 FOR EACH ROW
 BEGIN
-    UPDATE teams t
-    SET is_open = (
-        SELECT COUNT(*) FROM team_members tm
-        WHERE tm.team_id = NEW.team_id AND tm.status = 'ACTIVE'
-    ) < t.max_size
-    WHERE t.team_id = NEW.team_id;
-
     INSERT INTO audit_logs(entity_name, entity_id, action_name, message)
     VALUES ('team_members', NEW.team_member_id, 'JOINED', 'Team member added');
 END//
 
-CREATE TRIGGER trg_team_members_au_status
-AFTER UPDATE ON team_members
-FOR EACH ROW
-BEGIN
-    UPDATE teams t
-    SET is_open = (
-        SELECT COUNT(*) FROM team_members tm
-        WHERE tm.team_id = NEW.team_id AND tm.status = 'ACTIVE'
-    ) < t.max_size
-    WHERE t.team_id = NEW.team_id;
-END//
-
-CREATE TRIGGER trg_team_members_ad_status
-AFTER DELETE ON team_members
-FOR EACH ROW
-BEGIN
-    UPDATE teams t
-    SET is_open = (
-        SELECT COUNT(*) FROM team_members tm
-        WHERE tm.team_id = OLD.team_id AND tm.status = 'ACTIVE'
-    ) < t.max_size
-    WHERE t.team_id = OLD.team_id;
-END//
 
 CREATE TRIGGER trg_registrations_bi_validate
 BEFORE INSERT ON registrations

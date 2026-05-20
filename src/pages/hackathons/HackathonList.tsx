@@ -21,7 +21,7 @@ export default function HackathonList() {
   const [onlineOnly, setOnlineOnly] = React.useState(false);
 
   React.useEffect(() => {
-    api.get<Hackathon[]>('/hackathons')
+    api.get<Hackathon[]>('/hackathons/public')
       .then(response => setHackathons(response.data))
       .catch(() => setHackathons(mockHackathons));
   }, []);

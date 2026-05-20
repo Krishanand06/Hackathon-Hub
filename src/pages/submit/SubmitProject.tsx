@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
-import { mockHackathons, mockTeams } from '../../data/mockData';
+import React, { useState, useEffect } from 'react';
+import { mockHackathons } from '../../data/mockData';
 import { Link } from 'react-router-dom';
 import { Github, ExternalLink, Upload } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import api from '../../api/client';
+import { Hackathon, Team } from '../../types';
 
 export default function SubmitProject() {
   const { user } = useAuth();
@@ -12,23 +13,49 @@ export default function SubmitProject() {
     repoUrl: '', demoUrl: '', techStack: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [hackathons, setHackathons] = useState<Hackathon[]>([]);
+  const [myTeams, setMyTeams] = useState<Team[]>([]);
+
+  useEffect(() => {
+    api.get<Hackathon[]>('/hackathons/public')
+      .then(res => {
+        setHackathons(res.data || []);
+      })
+      .catch(() => setHackathons(mockHackathons));
+
+    api.get<Team[]>('/teams')
+      .then(res => {
+        const allTeams = res.data || [];
+        const filtered = allTeams.filter(t => 
+          t.leaderId === user?.id || 
+          t.members.some(m => m.userId === user?.id)
+        );
+        setMyTeams(filtered);
+      })
+      .catch(() => setMyTeams([]));
+  }, [user?.id]);
+
   const set = (f: string) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
     setForm(prev => ({ ...prev, [f]: e.target.value }));
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.hackathonId || !form.projectTitle || !form.repoUrl) return;
+
     api.post('/submissions', {
-      hackathonId: Number(form.hackathonId),
-      teamId: form.teamId ? Number(form.teamId) : null,
-      userId: user?.id ?? 2,
       projectTitle: form.projectTitle,
       description: form.description,
+      hackathon: { id: Number(form.hackathonId) },
+      team: form.teamId ? { id: Number(form.teamId) } : null,
+      submittedBy: { id: user?.id ?? 2 },
       repoUrl: form.repoUrl,
       demoUrl: form.demoUrl || null,
       techStack: form.techStack.split(',').map(item => item.trim()).filter(Boolean),
-    }).catch(() => undefined);
-    setSubmitted(true);
+    }).then(() => {
+      setSubmitted(true);
+    }).catch(err => {
+      window.alert(err.response?.data?.message || "Failed to submit project. Please try again.");
+    });
   };
 
   if (submitted) return (
@@ -47,6 +74,8 @@ export default function SubmitProject() {
     </div>
   );
 
+  const availableTeams = myTeams.filter(t => !form.hackathonId || t.hackathonId === Number(form.hackathonId));
+
   return (
     <div className="page-container" style={{ maxWidth: 640 }}>
       <h1 style={{ margin: '0 0 4px', fontSize: 24, fontWeight: 600 }}>Submit Project</h1>
@@ -62,7 +91,7 @@ export default function SubmitProject() {
               <label className="gh-label">Hackathon <span style={{ color: 'var(--color-danger)' }}>*</span></label>
               <select className="gh-input" value={form.hackathonId} onChange={set('hackathonId')} required>
                 <option value="">Select hackathon…</option>
-                {mockHackathons.filter(h => ['OPEN', 'IN_PROGRESS'].includes(h.status)).map(h => (
+                {hackathons.filter(h => ['OPEN', 'IN_PROGRESS'].includes(h.status)).map(h => (
                   <option key={h.id} value={h.id}>{h.title}</option>
                 ))}
               </select>
@@ -71,7 +100,7 @@ export default function SubmitProject() {
               <label className="gh-label">Team (optional)</label>
               <select className="gh-input" value={form.teamId} onChange={set('teamId')}>
                 <option value="">Individual submission</option>
-                {mockTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
+                {availableTeams.map(t => <option key={t.id} value={t.id}>{t.name}</option>)}
               </select>
             </div>
           </div>

@@ -28,7 +28,7 @@ export default function HackathonDetail() {
 
   React.useEffect(() => {
     if (!id) return;
-    api.get<Hackathon>(`/hackathons/${id}`)
+    api.get<Hackathon>(`/hackathons/public/${id}`)
       .then(response => setHackathon(response.data))
       .catch(() => setHackathon(mockHackathons.find(h => h.id === Number(id))));
 

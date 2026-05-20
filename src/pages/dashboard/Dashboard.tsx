@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { mockHackathons, mockTeams, mockSubmissions, mockMentors, mockLeaderboard } from '../../data/mockData';
@@ -7,7 +7,7 @@ import {
   ExternalLink, Gavel, LayoutDashboard, Plus, Star, Trophy, Upload, Users,
 } from 'lucide-react';
 import api from '../../api/client';
-import { Mentor, Submission } from '../../types';
+import { Mentor, Submission, Team, Hackathon, MentorSlot } from '../../types';
 
 function formatDate(date: string) {
   return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
@@ -25,10 +25,6 @@ function getDaysLabel(date: string) {
   return `${days} days`;
 }
 
-const MY_HACKATHON_IDS = [1, 2];
-const MY_TEAM_IDS = [1];
-const MY_SUBMISSION_IDS = [1];
-
 const statusClass: Record<string, string> = {
   OPEN: 'gh-badge-green',
   UPCOMING: 'gh-badge-yellow',
@@ -38,7 +34,7 @@ const statusClass: Record<string, string> = {
 };
 
 export default function Dashboard() {
-  const { user } = useAuth();
+  const { user, isAuthenticated } = useAuth();
 
   if (user?.role === 'MENTOR') {
     return <MentorDashboard />;
@@ -48,26 +44,121 @@ export default function Dashboard() {
     return <JudgeDashboard />;
   }
 
-  const myHackathons = mockHackathons.filter(h => MY_HACKATHON_IDS.includes(h.id));
-  const myTeams = mockTeams.filter(t => MY_TEAM_IDS.includes(t.id));
-  const mySubmissions = mockSubmissions.filter(s => MY_SUBMISSION_IDS.includes(s.id));
-  const mySessions = mockMentors.flatMap(mentor =>
-    mentor.availableSlots
-      .filter(slot => slot.booked && MY_TEAM_IDS.includes(slot.bookedByTeamId || 0))
-      .map(slot => ({
-        ...slot,
-        mentorName: mentor.fullName,
-        mentorRole: mentor.designation,
-        mentorCompany: mentor.company,
-        expertise: mentor.expertise.slice(0, 3),
-      }))
-  ).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+  const [realTeams, setRealTeams] = useState<Team[]>([]);
+  const [realHackathons, setRealHackathons] = useState<Hackathon[]>([]);
+  const [realSubmissions, setRealSubmissions] = useState<Submission[]>([]);
+  const [allMentors, setAllMentors] = useState<Mentor[]>([]);
+  const [myBookings, setMyBookings] = useState<MentorSlot[]>([]);
+  const [toastVisible, setToastVisible] = useState(false);
+  const [toastMessage, setToastMessage] = useState('');
+  const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  const fetchDashboardData = useCallback(() => {
+    if (!isAuthenticated) return;
+    api.get<Team[]>('/teams')
+      .then(res => setRealTeams(res.data || []))
+      .catch(() => setRealTeams([]));
+    api.get<Hackathon[]>('/hackathons/public')
+      .then(res => setRealHackathons(res.data || []))
+      .catch(() => setRealHackathons([]));
+    api.get<Submission[]>('/submissions')
+      .then(res => setRealSubmissions(res.data || []))
+      .catch(() => setRealSubmissions(mockSubmissions));
+    api.get<Mentor[]>('/mentors')
+      .then(res => setAllMentors(res.data || []))
+      .catch(() => setAllMentors([]));
+    if (user?.id) {
+      api.get<MentorSlot[]>(`/mentors/my-bookings?userId=${user.id}`)
+        .then(res => setMyBookings(res.data || []))
+        .catch(() => setMyBookings([]));
+    }
+  }, [isAuthenticated, user?.id]);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  const myTeams = realTeams.filter(t => 
+    t.leaderId === user?.id || 
+    t.members.some(m => m.userId === user?.id)
+  );
+
+  const myTeamIds = myTeams.map(t => t.id);
+
+  const myHackathons = realHackathons.filter(h => 
+    myTeams.some(t => t.hackathonId === h.id)
+  );
+
+  const mySubmissions = realSubmissions.filter(s => 
+    myTeamIds.includes(s.teamId)
+  );
+
+  const mySessions = myBookings.map(slot => {
+    const mentor = allMentors.find(m => m.id === slot.mentorId);
+    return {
+      ...slot,
+      mentorName: mentor?.fullName || 'Mentor',
+      mentorRole: mentor?.designation || 'Expert',
+      mentorCompany: mentor?.company || 'Company',
+      expertise: mentor?.expertise ? mentor.expertise.slice(0, 3) : ['General'],
+    };
+  }).sort((a, b) => new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+
+  const pendingRequests = realTeams.flatMap(t => {
+    if (t.leaderId === user?.id && t.pendingRequests && t.pendingRequests.length > 0) {
+      return t.pendingRequests.map(req => ({
+        ...req,
+        teamId: t.id,
+        teamName: t.name,
+      }));
+    }
+    return [];
+  });
+
+  const handleApprove = (teamId: number, userId: number, requesterName: string) => {
+    const actionKey = `approve-${teamId}-${userId}`;
+    setActionLoading(actionKey);
+    api.post(`/teams/${teamId}/approve?userId=${userId}&leaderId=${user?.id}`)
+      .then(() => {
+        setToastMessage(`Approved ${requesterName}'s request successfully!`);
+        setToastVisible(true);
+        setTimeout(() => setToastVisible(false), 3000);
+        fetchDashboardData();
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("Failed to approve user.");
+      })
+      .finally(() => {
+        setActionLoading(null);
+      });
+  };
+
+  const handleReject = (teamId: number, userId: number, requesterName: string) => {
+    const actionKey = `reject-${teamId}-${userId}`;
+    setActionLoading(actionKey);
+    api.post(`/teams/${teamId}/reject?userId=${userId}&leaderId=${user?.id}`)
+      .then(() => {
+        setToastMessage(`Rejected ${requesterName}'s request.`);
+        setToastVisible(true);
+        setTimeout(() => setToastVisible(false), 3000);
+        fetchDashboardData();
+      })
+      .catch((err) => {
+        console.error(err);
+        alert("Failed to reject user.");
+      })
+      .finally(() => {
+        setActionLoading(null);
+      });
+  };
 
   const initials = user?.fullName
     ? user.fullName.split(' ').map(part => part[0]).join('').toUpperCase().slice(0, 2)
     : '?';
 
   const firstName = user?.fullName?.split(' ')[0] ?? 'Student';
+
 
   return (
     <div className="page-container">
@@ -109,6 +200,58 @@ export default function Dashboard() {
           </Link>
         </div>
       </section>
+
+      {/* Pending Join Requests Widget */}
+      {pendingRequests.length > 0 && (
+        <section className="gh-card" style={{ padding: 20, borderTop: '3px solid var(--color-warning)', marginBottom: 20 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+            <Users size={18} color="var(--color-warning)" />
+            <h2 style={{ margin: 0, fontSize: 16, fontWeight: 700 }}>Pending Join Requests ({pendingRequests.length})</h2>
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {pendingRequests.map(req => (
+              <div key={`${req.teamId}-${req.userId}`} style={{
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                gap: 16,
+                padding: 12,
+                borderRadius: 6,
+                backgroundColor: 'var(--color-bg-secondary)',
+                border: '1px solid var(--color-border)',
+                flexWrap: 'wrap'
+              }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 600, fontSize: 14, color: 'var(--color-text-primary)' }}>
+                    {req.fullName} <span style={{ color: 'var(--color-text-muted)', fontWeight: 400, fontSize: 13 }}>({req.username})</span>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--color-text-muted)', marginTop: 2 }}>
+                    Wants to join: <strong style={{ color: 'var(--color-accent)' }}>{req.teamName}</strong>
+                  </div>
+                </div>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button
+                    onClick={() => handleReject(req.teamId, req.userId, req.fullName)}
+                    disabled={actionLoading !== null}
+                    className="gh-btn gh-btn-danger"
+                    style={{ fontSize: 12, padding: '4px 12px' }}
+                  >
+                    {actionLoading === `reject-${req.teamId}-${req.userId}` ? 'Rejecting...' : 'Reject'}
+                  </button>
+                  <button
+                    onClick={() => handleApprove(req.teamId, req.userId, req.fullName)}
+                    disabled={actionLoading !== null}
+                    className="gh-btn"
+                    style={{ fontSize: 12, padding: '4px 12px', backgroundColor: 'var(--color-success)', borderColor: 'transparent', color: '#fff' }}
+                  >
+                    {actionLoading === `approve-${req.teamId}-${req.userId}` ? 'Approving...' : 'Accept'}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
 
       <div className="dashboard-focus-grid">
         <section className="gh-card" style={{ padding: 20, borderTop: '3px solid var(--color-brand)' }}>
@@ -326,6 +469,18 @@ export default function Dashboard() {
           }
         }
       `}</style>
+      {toastVisible && (
+        <div style={{
+          position: 'fixed', bottom: 24, right: 24,
+          backgroundColor: 'var(--color-success-subtle)', border: '1px solid var(--color-success)',
+          borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--color-success)',
+          fontWeight: 500,
+          transition: 'opacity 0.3s ease',
+          zIndex: 1000,
+        }}>
+          ✓ {toastMessage}
+        </div>
+      )}
     </div>
   );
 }
@@ -516,6 +671,12 @@ function MentorDashboard() {
     endTime: string;
     booked: boolean;
     bookedByTeamId?: number;
+    bookedBy?: {
+      id: number;
+      username: string;
+      email: string;
+      fullName: string;
+    };
   };
   const baseSlots: MentorDashboardSlot[] = mentor.availableSlots;
   const [slotStatus, setSlotStatus] = useState<Record<number, boolean>>(
@@ -654,8 +815,17 @@ function MentorDashboard() {
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, marginBottom: 10 }}>
                     <div>
-                      <div style={{ fontWeight: 700, fontSize: 15 }}>{slot.teamName}</div>
-                      <div style={{ color: 'var(--color-text-muted)', fontSize: 12, marginTop: 3 }}>{slot.hackathonTitle}</div>
+                      <div style={{ fontWeight: 700, fontSize: 15 }}>
+                        {slot.bookedBy ? slot.bookedBy.fullName : slot.teamName}
+                      </div>
+                      {slot.bookedBy && (
+                        <div style={{ color: 'var(--color-accent)', fontSize: 12, marginTop: 2, fontWeight: 500 }}>
+                          📧 {slot.bookedBy.email}
+                        </div>
+                      )}
+                      <div style={{ color: 'var(--color-text-muted)', fontSize: 12, marginTop: 3 }}>
+                        {slot.hackathonTitle} {slot.bookedBy ? `(${slot.teamName})` : ''}
+                      </div>
                     </div>
                     <span className="gh-badge gh-badge-green" style={{ height: 22 }}>Confirmed</span>
                   </div>

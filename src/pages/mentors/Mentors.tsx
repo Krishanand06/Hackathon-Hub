@@ -14,6 +14,7 @@ export default function Mentors() {
   const [selectedSlot, setSelectedSlot] = useState<MentorSlot | null>(null);
   const [booked, setBooked] = useState<number[]>([]);
   const [myBookings, setMyBookings] = useState<MentorSlot[]>([]);
+  const [toastVisible, setToastVisible] = useState(false);
 
   const fetchBookings = React.useCallback(() => {
     if (user?.id) {
@@ -66,7 +67,8 @@ export default function Mentors() {
           }));
           fetchBookings();
           setBooked(b => [...b, selectedSlot.id]);
-          window.alert("Session booked successfully!");
+          setToastVisible(true);
+          setTimeout(() => setToastVisible(false), 3000);
         })
         .catch(() => {
           window.alert("This slot is not available or already booked.");
@@ -186,12 +188,14 @@ export default function Mentors() {
         </div>
       </Modal>
 
-      {booked.length > 0 && (
+      {toastVisible && (
         <div style={{
           position: 'fixed', bottom: 24, right: 24,
           backgroundColor: 'var(--color-success-subtle)', border: '1px solid var(--color-success)',
           borderRadius: 8, padding: '12px 16px', fontSize: 13, color: 'var(--color-success)',
           fontWeight: 500,
+          transition: 'opacity 0.3s ease',
+          zIndex: 1000,
         }}>
           ✓ Session booked successfully!
         </div>

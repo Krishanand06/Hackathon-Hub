@@ -2,6 +2,7 @@ package edu.bits.hackathonhub.model;
 
 import lombok.Builder;
 import lombok.Data;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.List;
 
@@ -17,6 +18,7 @@ public class TeamDTO {
     private List<TeamMemberDTO> pendingRequests;
     private Integer maxSize;
     private List<String> requiredSkills;
+    @JsonProperty("isOpen")
     private boolean isOpen;
     private Long leaderId;
     private String leaderName;

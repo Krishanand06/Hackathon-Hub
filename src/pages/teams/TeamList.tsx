@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { mockTeams } from '../../data/mockData';
+import { mockTeams, mockHackathons } from '../../data/mockData';
 import TeamCard from '../../components/teams/TeamCard';
 import { Search, Users, Cpu } from 'lucide-react';
 import { SkillSelector } from '../../components/ui/SkillBadge';
@@ -25,7 +25,12 @@ export default function TeamList() {
   });
 
   React.useEffect(() => {
-    api.get<Hackathon[]>('/hackathons').then(res => setHackathons(Array.isArray(res.data) ? res.data : []));
+    api.get<Hackathon[]>('/hackathons/public')
+      .then(res => {
+        const data = Array.isArray(res.data) ? res.data : [];
+        setHackathons(data.length > 0 ? data : mockHackathons);
+      })
+      .catch(() => setHackathons(mockHackathons));
   }, []);
 
   const fetchTeams = () => {

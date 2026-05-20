@@ -143,6 +143,12 @@ export interface MentorSlot {
   booked: boolean;
   bookedByTeamId?: number;
   mentorId?: number;
+  bookedBy?: {
+    id: number;
+    username: string;
+    email: string;
+    fullName: string;
+  };
 }
 
 export interface MentorBooking {

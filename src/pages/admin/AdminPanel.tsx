@@ -48,7 +48,7 @@ export default function AdminPanel() {
   const [newHackathon, setNewHackathon] = useState(emptyHackathon);
 
   React.useEffect(() => {
-    api.get<Hackathon[]>('/hackathons').then(response => setHackathons(response.data)).catch(() => setHackathons(mockHackathons));
+    api.get<Hackathon[]>('/hackathons/public').then(response => setHackathons(response.data)).catch(() => setHackathons(mockHackathons));
     api.get<Submission[]>('/submissions').then(response => setSubmissions(response.data)).catch(() => setSubmissions(mockSubmissions));
     api.get<Team[]>('/teams').then(response => setTeams(response.data)).catch(() => setTeams(mockTeams));
   }, []);

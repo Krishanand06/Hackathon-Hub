@@ -18,7 +18,7 @@ export default function Leaderboard() {
   }, [selectedHackathon]);
 
   React.useEffect(() => {
-    api.get<Hackathon[]>('/hackathons')
+    api.get<Hackathon[]>('/hackathons/public')
       .then(response => setHackathons(Array.isArray(response.data) ? response.data : []))
       .catch(() => setHackathons([]));
   }, []);

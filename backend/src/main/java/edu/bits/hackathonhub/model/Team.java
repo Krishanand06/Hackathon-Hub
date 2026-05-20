@@ -2,6 +2,7 @@ package edu.bits.hackathonhub.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
 import java.util.Set;
 
@@ -51,6 +52,7 @@ public class Team {
     @Column(name = "max_size")
     private Integer maxSize;
     @Column(name = "is_open")
+    @JsonProperty("isOpen")
     private boolean isOpen;
 
     @Transient

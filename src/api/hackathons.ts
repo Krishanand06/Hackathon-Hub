@@ -3,10 +3,10 @@ import { HackathonFilters } from '../types';
 
 export const hackathonApi = {
   getAll: (filters?: HackathonFilters) =>
-    api.get('/hackathons', { params: filters }),
+    api.get('/hackathons/public', { params: filters }),
 
   getById: (id: number) =>
-    api.get(`/hackathons/${id}`),
+    api.get(`/hackathons/public/${id}`),
 
   create: (data: unknown) =>
     api.post('/hackathons', data),
