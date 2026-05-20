@@ -61,8 +61,16 @@ export default function Dashboard() {
     api.get<Hackathon[]>('/hackathons/public')
       .then(res => setRealHackathons(res.data || []))
       .catch(() => setRealHackathons([]));
-    api.get<Submission[]>('/submissions')
-      .then(res => setRealSubmissions(res.data || []))
+    api.get<any[]>('/submissions')
+      .then(res => {
+        const mapped = (res.data || []).map((s: any) => ({
+          ...s,
+          hackathonId: s.hackathonId || s.hackathon?.id,
+          teamId: s.teamId || s.team?.id,
+          teamName: s.teamName || s.team?.name || 'Individual'
+        }));
+        setRealSubmissions(mapped);
+      })
       .catch(() => setRealSubmissions(mockSubmissions));
     api.get<Mentor[]>('/mentors')
       .then(res => setAllMentors(res.data || []))
@@ -490,8 +498,16 @@ function JudgeDashboard() {
   const [submissions, setSubmissions] = useState<Submission[]>(mockSubmissions);
 
   React.useEffect(() => {
-    api.get<Submission[]>('/submissions')
-      .then(res => setSubmissions(res.data))
+    api.get<any[]>('/submissions')
+      .then(res => {
+        const mapped = (res.data || []).map((s: any) => ({
+          ...s,
+          hackathonId: s.hackathonId || s.hackathon?.id,
+          teamId: s.teamId || s.team?.id,
+          teamName: s.teamName || s.team?.name || 'Individual'
+        }));
+        setSubmissions(mapped);
+      })
       .catch(() => setSubmissions(mockSubmissions));
   }, []);
 

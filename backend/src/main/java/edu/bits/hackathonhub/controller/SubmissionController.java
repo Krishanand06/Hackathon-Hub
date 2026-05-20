@@ -17,7 +17,7 @@ public class SubmissionController {
     private final SubmissionService service;
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN') or hasRole('JUDGE')")
+    @PreAuthorize("hasAnyRole('ADMIN', 'JUDGE', 'STUDENT', 'MENTOR')")
     public ResponseEntity<List<Submission>> getAllSubmissions() {
         return ResponseEntity.ok(service.getAllSubmissions());
     }

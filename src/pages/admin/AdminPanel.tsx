@@ -52,7 +52,17 @@ export default function AdminPanel() {
 
   React.useEffect(() => {
     hackathonApi.getAll().then(response => setHackathons(response.data)).catch(() => setHackathonError('Could not load hackathons from the database.'));
-    api.get<Submission[]>('/submissions').then(response => setSubmissions(response.data)).catch(() => setSubmissions(mockSubmissions));
+    api.get<any[]>('/submissions')
+      .then(response => {
+        const mapped = (response.data || []).map((s: any) => ({
+          ...s,
+          hackathonId: s.hackathonId || s.hackathon?.id,
+          teamId: s.teamId || s.team?.id,
+          teamName: s.teamName || s.team?.name || 'Individual'
+        }));
+        setSubmissions(mapped);
+      })
+      .catch(() => setSubmissions(mockSubmissions));
     api.get<Team[]>('/teams').then(response => setTeams(response.data)).catch(() => setTeams(mockTeams));
   }, []);
 
