@@ -8,4 +8,5 @@ public interface SubmissionRepository extends JpaRepository<Submission, Long> {
     List<Submission> findByHackathonId(Long hackathonId);
     List<Submission> findByTeamId(Long teamId);
     List<Submission> findBySubmittedById(Long userId);
+    boolean existsByHackathonIdAndTeamId(Long hackathonId, Long teamId);
 }

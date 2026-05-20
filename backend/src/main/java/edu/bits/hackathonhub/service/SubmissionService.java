@@ -5,6 +5,8 @@ import edu.bits.hackathonhub.model.SubmissionStatus;
 import edu.bits.hackathonhub.repository.SubmissionRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
+import org.springframework.http.HttpStatus;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -29,6 +31,18 @@ public class SubmissionService {
     }
 
     public Submission createSubmission(Submission submission) {
+        if (submission.getHackathon() != null && submission.getTeam() != null) {
+            Long hackathonId = submission.getHackathon().getId();
+            Long teamId = submission.getTeam().getId();
+            if (hackathonId != null && teamId != null) {
+                if (repository.existsByHackathonIdAndTeamId(hackathonId, teamId)) {
+                    throw new ResponseStatusException(
+                        HttpStatus.BAD_REQUEST,
+                        "Your team has already submitted a project for this hackathon."
+                    );
+                }
+            }
+        }
         submission.setSubmittedAt(LocalDateTime.now());
         submission.setStatus(SubmissionStatus.SUBMITTED);
         return repository.save(submission);
