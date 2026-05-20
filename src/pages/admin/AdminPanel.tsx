@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { mockHackathons, mockSubmissions, mockLeaderboard, mockTeams } from '../../data/mockData';
+import { mockSubmissions, mockLeaderboard, mockTeams } from '../../data/mockData';
 import LeaderboardTable from '../../components/leaderboard/LeaderboardTable';
 import { useAuth } from '../../contexts/AuthContext';
-import { CheckCircle, ExternalLink, Plus, Save, Star, Users } from 'lucide-react';
+import { CheckCircle, ExternalLink, Plus, Save, Star, Trash2, Users } from 'lucide-react';
 import { Hackathon, Submission, Team } from '../../types';
 import api from '../../api/client';
+import { hackathonApi } from '../../api/hackathons';
 
 const CRITERIA = ['innovation', 'implementation', 'presentation', 'impact', 'feasibility'] as const;
 
@@ -42,13 +43,15 @@ export default function AdminPanel() {
   const [scores, setScores] = useState<Record<number, Record<string, number>>>({});
   const [feedbacks, setFeedbacks] = useState<Record<number, string>>({});
   const [evaluated, setEvaluated] = useState<number[]>([]);
-  const [hackathons, setHackathons] = useState<Hackathon[]>(mockHackathons);
+  const [hackathons, setHackathons] = useState<Hackathon[]>([]);
   const [submissions, setSubmissions] = useState<Submission[]>(mockSubmissions);
   const [teams, setTeams] = useState<Team[]>(mockTeams);
   const [newHackathon, setNewHackathon] = useState(emptyHackathon);
+  const [hackathonError, setHackathonError] = useState('');
+  const [savingHackathon, setSavingHackathon] = useState(false);
 
   React.useEffect(() => {
-    api.get<Hackathon[]>('/hackathons/public').then(response => setHackathons(response.data)).catch(() => setHackathons(mockHackathons));
+    hackathonApi.getAll().then(response => setHackathons(response.data)).catch(() => setHackathonError('Could not load hackathons from the database.'));
     api.get<Submission[]>('/submissions').then(response => setSubmissions(response.data)).catch(() => setSubmissions(mockSubmissions));
     api.get<Team[]>('/teams').then(response => setTeams(response.data)).catch(() => setTeams(mockTeams));
   }, []);
@@ -81,18 +84,20 @@ export default function AdminPanel() {
     return CRITERIA.reduce((acc, c) => acc + (currentScores[c] || 0), 0) / CRITERIA.length;
   };
 
-  const addHackathon = (event: React.FormEvent) => {
+  const addHackathon = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!newHackathon.title || !newHackathon.startDate || !newHackathon.endDate || !newHackathon.registrationDeadline) return;
 
-    const created: Hackathon = {
-      id: Date.now(),
+    setHackathonError('');
+    setSavingHackathon(true);
+
+    const payload = {
       title: newHackathon.title,
       theme: newHackathon.theme || 'General Innovation',
       description: newHackathon.description || 'Details will be updated soon.',
-      startDate: newHackathon.startDate,
-      endDate: newHackathon.endDate,
-      registrationDeadline: newHackathon.registrationDeadline,
+      startDate: toDateTime(newHackathon.startDate),
+      endDate: toDateTime(newHackathon.endDate),
+      registrationDeadline: toDateTime(newHackathon.registrationDeadline),
       maxParticipants: Number(newHackathon.maxParticipants) || 100,
       currentParticipants: 0,
       minTeamSize: Number(newHackathon.minTeamSize) || 1,
@@ -106,10 +111,27 @@ export default function AdminPanel() {
       organizerName: user?.fullName ?? 'BITS Admin',
     };
 
-    api.post<Hackathon>('/hackathons', created)
-      .then(response => setHackathons(prev => [response.data, ...prev]))
-      .catch(() => setHackathons(prev => [created, ...prev]));
-    setNewHackathon(emptyHackathon);
+    try {
+      const response = await hackathonApi.create(payload);
+      setHackathons(prev => [response.data, ...prev]);
+      setNewHackathon(emptyHackathon);
+    } catch (error) {
+      console.error('Create hackathon failed', error);
+      setHackathonError('Hackathon was not saved. Please confirm you are logged in as ADMIN and the backend is running.');
+    } finally {
+      setSavingHackathon(false);
+    }
+  };
+
+  const deleteHackathon = async (hackathonId: number) => {
+    setHackathonError('');
+    try {
+      await hackathonApi.delete(hackathonId);
+      setHackathons(prev => prev.filter(hackathon => hackathon.id !== hackathonId));
+    } catch (error) {
+      console.error('Delete hackathon failed', error);
+      setHackathonError('Hackathon was not deleted. Please confirm your admin session is valid.');
+    }
   };
 
   return (
@@ -251,9 +273,14 @@ export default function AdminPanel() {
             <div>
               <h2 style={{ margin: '0 0 4px', fontSize: 17, fontWeight: 700 }}>Add Hackathon</h2>
               <p style={{ margin: 0, color: 'var(--color-text-muted)', fontSize: 13 }}>
-                Saves locally for now; later this maps to the `hackathons` table.
+                Saves to the MySQL `hackathons` table.
               </p>
             </div>
+            {hackathonError && (
+              <div className="gh-badge gh-badge-red" style={{ whiteSpace: 'normal', lineHeight: 1.4 }}>
+                {hackathonError}
+              </div>
+            )}
 
             <Field label="Title" value={newHackathon.title} onChange={value => setNewHackathon(prev => ({ ...prev, title: value }))} required />
             <Field label="Theme" value={newHackathon.theme} onChange={value => setNewHackathon(prev => ({ ...prev, theme: value }))} />
@@ -272,6 +299,20 @@ export default function AdminPanel() {
               <Field label="Max Team" type="number" value={newHackathon.maxTeamSize} onChange={value => setNewHackathon(prev => ({ ...prev, maxTeamSize: value }))} />
             </div>
             <Field label="Prize Pool" value={newHackathon.prizePool} onChange={value => setNewHackathon(prev => ({ ...prev, prizePool: value }))} />
+            <div>
+              <label className="gh-label">Status</label>
+              <select
+                className="gh-input"
+                value={newHackathon.status}
+                onChange={event => setNewHackathon(prev => ({ ...prev, status: event.target.value as Hackathon['status'] }))}
+              >
+                <option value="UPCOMING">Upcoming</option>
+                <option value="OPEN">Open</option>
+                <option value="IN_PROGRESS">In Progress</option>
+                <option value="JUDGING">Judging</option>
+                <option value="COMPLETED">Completed</option>
+              </select>
+            </div>
             <Field label="Tags" value={newHackathon.tags} onChange={value => setNewHackathon(prev => ({ ...prev, tags: value }))} placeholder="AI, Web, SQL" />
             <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--color-text-secondary)' }}>
               <input type="checkbox" checked={newHackathon.isOnline} onChange={event => setNewHackathon(prev => ({ ...prev, isOnline: event.target.checked }))} />
@@ -280,8 +321,8 @@ export default function AdminPanel() {
             {!newHackathon.isOnline && (
               <Field label="Location" value={newHackathon.venue} onChange={value => setNewHackathon(prev => ({ ...prev, venue: value }))} />
             )}
-            <button type="submit" className="gh-btn gh-btn-primary" style={{ justifyContent: 'center', gap: 6 }}>
-              <Plus size={14} /> Add Hackathon
+            <button type="submit" className="gh-btn gh-btn-primary" disabled={savingHackathon} style={{ justifyContent: 'center', gap: 6 }}>
+              <Plus size={14} /> {savingHackathon ? 'Saving...' : 'Add Hackathon'}
             </button>
           </form>
 
@@ -298,6 +339,13 @@ export default function AdminPanel() {
                 <button className="gh-btn gh-btn-secondary" style={{ fontSize: 12, padding: '3px 10px' }}>
                   <Save size={12} /> Manage
                 </button>
+                <button
+                  onClick={() => deleteHackathon(hackathon.id)}
+                  className="gh-btn gh-btn-secondary"
+                  style={{ fontSize: 12, padding: '3px 10px', color: 'var(--color-danger)' }}
+                >
+                  <Trash2 size={12} /> Delete
+                </button>
               </div>
             ))}
           </div>
@@ -305,6 +353,10 @@ export default function AdminPanel() {
       )}
     </div>
   );
+}
+
+function toDateTime(date: string) {
+  return `${date}T00:00:00`;
 }
 
 function Field({ label, value, onChange, type = 'text', placeholder, required = false }: {

@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Calendar, MapPin, Users, Trophy, Globe, ArrowLeft, Clock, Tag } from 'lucide-react';
-import { mockHackathons, mockTeams } from '../../data/mockData';
+import { mockTeams } from '../../data/mockData';
 import { useAuth } from '../../contexts/AuthContext';
 import Modal from '../../components/ui/Modal';
 import TeamCard from '../../components/teams/TeamCard';
 import api from '../../api/client';
 import { Hackathon, Team } from '../../types';
+import { hackathonApi } from '../../api/hackathons';
 
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
@@ -20,22 +21,35 @@ const statusColors: Record<string, string> = {
 export default function HackathonDetail() {
   const { id } = useParams();
   const { isAuthenticated, user } = useAuth();
-  const [hackathon, setHackathon] = useState<Hackathon | undefined>(() => mockHackathons.find(h => h.id === Number(id)));
+  const [hackathon, setHackathon] = useState<Hackathon | undefined>();
   const [teams, setTeams] = useState<Team[]>(mockTeams);
+  const [loading, setLoading] = useState(true);
   const [registered, setRegistered] = useState(false);
   const [showModal, setShowModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'teams' | 'schedule'>('overview');
 
   React.useEffect(() => {
     if (!id) return;
-    api.get<Hackathon>(`/hackathons/public/${id}`)
+    setLoading(true);
+    hackathonApi.getById(Number(id))
       .then(response => setHackathon(response.data))
-      .catch(() => setHackathon(mockHackathons.find(h => h.id === Number(id))));
+      .catch(() => setHackathon(undefined))
+      .finally(() => setLoading(false));
 
     api.get<Team[]>('/teams')
       .then(response => setTeams(response.data))
       .catch(() => setTeams(mockTeams));
   }, [id]);
+
+  if (loading) {
+    return (
+      <div className="page-container" style={{ paddingTop: 40 }}>
+        <div className="gh-card" style={{ padding: 48, textAlign: 'center', color: 'var(--color-text-muted)' }}>
+          Loading hackathon...
+        </div>
+      </div>
+    );
+  }
 
   if (!hackathon) {
     return (

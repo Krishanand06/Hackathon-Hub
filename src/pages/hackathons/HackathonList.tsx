@@ -1,9 +1,8 @@
 import React from 'react';
-import { mockHackathons } from '../../data/mockData';
 import HackathonCard from '../../components/hackathons/HackathonCard';
-import { Search, Filter } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { Hackathon, HackathonStatus } from '../../types';
-import api from '../../api/client';
+import { hackathonApi } from '../../api/hackathons';
 
 const ALL_STATUSES: { value: HackathonStatus | ''; label: string }[] = [
   { value: '', label: 'All' },
@@ -15,15 +14,16 @@ const ALL_STATUSES: { value: HackathonStatus | ''; label: string }[] = [
 ];
 
 export default function HackathonList() {
-  const [hackathons, setHackathons] = React.useState<Hackathon[]>(mockHackathons);
+  const [hackathons, setHackathons] = React.useState<Hackathon[]>([]);
+  const [loadError, setLoadError] = React.useState('');
   const [search, setSearch] = React.useState('');
   const [status, setStatus] = React.useState<HackathonStatus | ''>('');
   const [onlineOnly, setOnlineOnly] = React.useState(false);
 
   React.useEffect(() => {
-    api.get<Hackathon[]>('/hackathons/public')
+    hackathonApi.getAll()
       .then(response => setHackathons(response.data))
-      .catch(() => setHackathons(mockHackathons));
+      .catch(() => setLoadError('Could not load hackathons from the database.'));
   }, []);
 
   const filtered = hackathons.filter(h => {
@@ -87,7 +87,11 @@ export default function HackathonList() {
       </div>
 
       {/* Grid */}
-      {filtered.length === 0 ? (
+      {loadError ? (
+        <div className="gh-card" style={{ padding: '48px', textAlign: 'center', color: 'var(--color-danger)' }}>
+          {loadError}
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="gh-card" style={{ padding: '48px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
           No hackathons match your filters.
         </div>

@@ -4,7 +4,7 @@ import { authApi } from '../api/auth';
 
 interface AuthContextType extends AuthState {
   login: (email: string, password: string) => Promise<void>;
-  loginDemo: (role?: DemoRole) => void;
+  loginDemo: (role?: DemoRole) => Promise<void>;
   register: (data: RegisterData) => Promise<void>;
   logout: () => void;
   updateUser: (user: User) => void;
@@ -69,6 +69,17 @@ const demoEmailMap: Record<string, DemoRole> = {
   'admin@bits.edu': 'ADMIN',
 };
 
+const demoPasswords: Record<DemoRole, string> = {
+  STUDENT: '123456',
+  MENTOR: '123456',
+  JUDGE: '123456',
+  ADMIN: '123456',
+};
+
+function isProtectedDemoSession(token: string, user: User) {
+  return token.startsWith('demo-') && (user.role === 'ADMIN' || user.role === 'JUDGE');
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<AuthState>({
     user: null,
@@ -82,6 +93,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (token && userStr) {
       try {
         const user = JSON.parse(userStr);
+        if (isProtectedDemoSession(token, user)) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          return;
+        }
         setState({ user, token, isAuthenticated: true });
       } catch {
         localStorage.removeItem('token');
@@ -105,8 +121,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       const response = await authApi.login({ email, password });
       persistSession(response.data.token, response.data.user);
       return;
-    } catch {
-      // Fall back to demo personas while the local API/database is not running.
+    } catch (error: any) {
+      if (error.response) {
+        throw error;
+      }
+      // Fall back to demo personas only when the local API/database is unreachable.
     }
 
     const demoRole = demoEmailMap[email.toLowerCase()];
@@ -125,7 +144,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const loginDemo = (role: DemoRole = 'STUDENT') => {
+  const loginDemo = async (role: DemoRole = 'STUDENT') => {
+    try {
+      const response = await authApi.login({
+        email: demoUsers[role].email,
+        password: demoPasswords[role],
+      });
+      persistSession(response.data.token, response.data.user);
+      return;
+    } catch (error: any) {
+      if (error.response) {
+        throw error;
+      }
+    }
     persistSession(`demo-${role.toLowerCase()}-token`, demoUsers[role]);
   };
 

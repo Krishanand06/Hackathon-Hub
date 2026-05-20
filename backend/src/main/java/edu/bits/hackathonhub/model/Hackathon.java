@@ -50,6 +50,10 @@ public class Hackathon {
     @Column(name = "is_online")
     private boolean isOnline;
     private String venue;
+    @Column(name = "organizer_id")
+    private Long organizerId;
+    @Column(name = "banner_url")
+    private String bannerUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -45,10 +45,11 @@ export default function Login() {
     setLoading(true);
     setError('');
     try {
-      loginDemo(role);
+      await loginDemo(role);
       navigate(role === 'ADMIN' || role === 'JUDGE' ? '/admin' : '/dashboard');
     } catch {
-      setError('Demo login failed.');
+      setError('Demo login failed. Make sure the backend is running and seeded with demo users.');
+    } finally {
       setLoading(false);
     }
   };

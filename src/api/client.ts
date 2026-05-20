@@ -23,6 +23,13 @@ api.interceptors.request.use(config => {
 api.interceptors.response.use(
   res => res,
   err => {
+    console.error('API request failed', {
+      method: err.config?.method,
+      url: err.config?.url,
+      status: err.response?.status,
+      data: err.response?.data,
+      hasToken: Boolean(localStorage.getItem('token')),
+    });
     if (err.response?.status === 401) {
       localStorage.removeItem('token');
       localStorage.removeItem('user');

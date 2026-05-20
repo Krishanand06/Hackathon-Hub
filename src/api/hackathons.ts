@@ -1,18 +1,18 @@
 import api from './client';
-import { HackathonFilters } from '../types';
+import { Hackathon, HackathonFilters } from '../types';
 
 export const hackathonApi = {
   getAll: (filters?: HackathonFilters) =>
-    api.get('/hackathons/public', { params: filters }),
+    api.get('/hackathons', { params: filters }),
 
   getById: (id: number) =>
-    api.get(`/hackathons/public/${id}`),
+    api.get(`/hackathons/${id}`),
 
   create: (data: unknown) =>
-    api.post('/hackathons', data),
+    api.post<Hackathon>('/hackathons', data),
 
   update: (id: number, data: unknown) =>
-    api.put(`/hackathons/${id}`, data),
+    api.put<Hackathon>(`/hackathons/${id}`, data),
 
   delete: (id: number) =>
     api.delete(`/hackathons/${id}`),
